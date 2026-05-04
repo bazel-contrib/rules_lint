@@ -196,7 +196,7 @@ setup() {
     run bazel run //format/test:format_Swift_with_swiftformat
     assert_success
 
-    assert_output --partial "+ swiftformat examples/swift/src/hello.swift"
+    assert_output --partial "+ swiftformat examples/swift/src/formatme.swift"
 }
 
 @test "should run buf on Protobuf" {

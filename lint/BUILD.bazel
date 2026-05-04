@@ -7,6 +7,7 @@ load("//lint/private:lint_aspect.bzl", "lint_options")
 package(default_visibility = ["//visibility:public"])
 
 exports_files(glob(["*.bzl"]) + [
+    "empty_swiftlint.yml",
     "lint_test.sh",
     "ps_script_analyzer_wrapper.ps1",
 ])
@@ -280,6 +281,15 @@ bzl_library(
     name = "taplo",
     srcs = ["taplo.bzl"],
     deps = ["//lint/private:lint_aspect"],
+)
+
+bzl_library(
+    name = "swiftlint",
+    srcs = ["swiftlint.bzl"],
+    deps = [
+        "//lint/private:lint_aspect",
+        "//lint/private:patcher_action",
+    ],
 )
 
 bzl_library(

@@ -1,4 +1,7 @@
 bazel-*
+
+.DS_Store
+.bazelrc.user
 .idea/
 .ijwb/
 node_modules

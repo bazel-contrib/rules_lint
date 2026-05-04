@@ -28,7 +28,7 @@ Each example includes a minimal working configuration for its supported tools. F
 | `shell/`            | shfmt                                                                         | ShellCheck                                  |
 | `sql/`              | Prettier with its SQL plugin                                                  |                                             |
 | `starlark/`         |                                                                               | Buildifier                                  |
-| `swift/`            | SwiftFormat                                                                   |                                             |
+| `swift/`            | SwiftFormat                                                                   | SwiftLint                                   |
 | `terraform/`        | terraform fmt                                                                 |                                             |
 | `toml/`             | Taplo                                                                         | Taplo                                       |
 | `xml/`              | Prettier with its XML plugin                                                  |                                             |
