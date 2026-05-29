@@ -145,7 +145,7 @@ Linters which are not language-specific:
 | HTML templates     | [djlint]                  |                                                         |
 | JSON, JSON5, JSONC | [Prettier]                |                                                         |
 | Java               | [google-java-format]      | [pmd], [Checkstyle], [SpotBugs]                         |
-| JavaScript         | [Prettier]                | [ESLint]                                                |
+| JavaScript         | [Prettier]                | [Biome], [ESLint]                                                |
 | Jsonnet            | [jsonnetfmt]              |                                                         |
 | Kotlin             | [ktfmt]                   | [ktlint]                                                |
 | Markdown           | [Prettier]                | [Vale]                                                  |

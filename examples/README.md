@@ -16,7 +16,7 @@ Each example includes a minimal working configuration for its supported tools. F
 | `java/`             | google-java-format                                                            | PMD, Checkstyle, SpotBugs                   |
 | `keep-sorted/`      |                                                                               | keep-sorted                                 |
 | `kotlin/`           | ktfmt                                                                         | ktlint                                      |
-| `nodejs/`           | Prettier for JavaScript, TypeScript, Vue, CSS, Less, SCSS, HTML, and Markdown | ESLint, Stylelint, Vale                     |
+| `nodejs/`           | Prettier or Biome for JavaScript, TypeScript, Vue, CSS, Less, SCSS, HTML, and Markdown | Biome, ESLint, Stylelint, Vale                     |
 | `other_formatters/` | cue fmt, Prettier, jsonnetfmt, djlint                                         |                                             |
 | `pkl/`              | pkl format                                                                    |                                             |
 | `protobuf/`         | Buf                                                                           | Buf                                         |
