@@ -1,6 +1,6 @@
-load("@rules_lint//format:defs.bzl", "format_multirun")
 load("@npm//:@biomejs/biome/package_json.bzl", biome_bin = "bin")
 load("@npm//:prettier/package_json.bzl", prettier = "bin")
+load("@rules_lint//format:defs.bzl", "format_multirun")
 
 package(default_visibility = ["//:__subpackages__"])
 
@@ -33,6 +33,9 @@ format_multirun(
     name = "format_biome",
     javascript = ":biome",
     javascript_check_args = ["format"],
-    javascript_fix_args = ["format", "--write"],
+    javascript_fix_args = [
+        "format",
+        "--write",
+    ],
     visibility = ["//:__subpackages__"],
 )

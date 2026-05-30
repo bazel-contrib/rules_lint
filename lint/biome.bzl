@@ -14,7 +14,7 @@ biome_bin.biome_binary(name = "biome")
 Finally, create the linter aspect, typically in `tools/lint/linters.bzl`:
 
 ```starlark
-load("@aspect_rules_lint//lint:biome.bzl", "lint_biome_aspect")
+load("@rules_lint//lint:biome.bzl", "lint_biome_aspect")
 
 biome = lint_biome_aspect(
     binary = Label("//tools/lint:biome"),
