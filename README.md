@@ -135,17 +135,19 @@ Linters which are not language-specific:
 | C#                 | [CSharpier]               |                                                         |
 | CUE                | [cue fmt]                 |                                                         |
 | CUDA               | [clang-format]            |                                                         |
-| CSS, Less, SCSS    | [Prettier]                | [Stylelint]                                             |
+| CSS | [Biome] or [Prettier] | [Stylelint] |
+| Less, SCSS | [Prettier] | [Stylelint] |
 | F#                 | [Fantomas]                |                                                         |
 | Go                 | [gofmt] or [gofumpt]      |                                                         |
 | Go Module          | [modfmt]                  |                                                         |
 | Gherkin            | [prettier-plugin-gherkin] |                                                         |
-| GraphQL            | [Prettier]                |                                                         |
-| HTML               | [Prettier]                |                                                         |
+| GraphQL | [Biome] or [Prettier] |  |
+| HTML | [Biome] or [Prettier] |  |
 | HTML templates     | [djlint]                  |                                                         |
-| JSON, JSON5, JSONC | [Prettier]                |                                                         |
+| JSON, JSONC | [Biome] or [Prettier] | |
+| JSON5 | [Prettier] | |
 | Java               | [google-java-format]      | [pmd], [Checkstyle], [SpotBugs]                         |
-| JavaScript         | [Prettier]                | [Biome], [ESLint]                                                |
+| JavaScript | [Biome] or [Prettier] | [Biome], [ESLint] |
 | Jsonnet            | [jsonnetfmt]              |                                                         |
 | Kotlin             | [ktfmt]                   | [ktlint]                                                |
 | Markdown           | [Prettier]                | [Vale]                                                  |
@@ -163,8 +165,8 @@ Linters which are not language-specific:
 | Swift              | [SwiftFormat] (1)         |                                                         |
 | Terraform          | [terraform] fmt           |                                                         |
 | TOML               | [taplo]                   | [taplo]                                                 |
-| TSX                | [Prettier]                | [ESLint]                                                |
-| TypeScript         | [Prettier]                | [ESLint]                                                |
+| TSX | [Biome] or [Prettier] | [Biome], [ESLint] |
+| TypeScript | [Biome] or [Prettier] | [Biome], [ESLint] |
 | Vue                | [Prettier]                |                                                         |
 | YAML               | [yamlfmt]                 | [yamllint]                                              |
 | XML                | [prettier/plugin-xml]     |                                                         |
