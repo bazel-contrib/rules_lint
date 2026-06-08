@@ -1,5 +1,5 @@
-load("@rules_lint//format:defs.bzl", "format_test")
 load("@rules_go//go:def.bzl", "go_binary", "go_library")
+load("@rules_lint//format:defs.bzl", "format_test")
 
 package(default_visibility = ["//visibility:public"])
 

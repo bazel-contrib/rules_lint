@@ -3,10 +3,10 @@
 Typical usage in `tools/lint/linters.bzl`:
 
 ```starlark
-load("@aspect_rules_lint//lint:golangci_lint.bzl", "lint_golangci_lint_aspect")
+load("@rules_lint//lint:golangci_lint.bzl", "lint_golangci_lint_aspect")
 
 golangci_lint = lint_golangci_lint_aspect(
-    binary = Label("@aspect_rules_lint//lint:golangci_lint_bin"),
+    binary = Label("@rules_lint//lint:golangci_lint_bin"),
     config = Label("//:.golangci.yml"),
 )
 ```
@@ -16,7 +16,7 @@ rules_go's `go_pkg_info_aspect` to obtain each package's pre-computed metadata
 (`.pkg.json`), transitive export data (`.x`), and stdlib archives, then runs the
 real golangci-lint binary against a static, file-reading `GOPACKAGESDRIVER`
 (`//lint/private/gopackagesdriver_static`). No bazel-in-bazel, no network, no
-shared module cache. See `docs/superpowers/notes/2026-06-03-golangci-spike-findings.md`.
+shared module cache.
 """
 
 load("@io_bazel_rules_go//go/private:providers.bzl", "GoStdLib")
@@ -147,7 +147,7 @@ def golangci_lint_action(ctx, executable, driver, pkg_info, sdk, stdlib, config,
     # package pattern "./..." after the flags. The driver ignores the pattern
     # (roots come from GOPACKAGESDRIVER_ROOTS), but the CLI requires one.
     sarif_setup = 'gl_sarif="$PWD/rules_lint_golangci.sarif"; '
-    run_golangci = '"$bin" "$@" --output.sarif.path "$gl_sarif" ./... >' + stdout.path + ' 2>&1'
+    run_golangci = '"$bin" "$@" --output.sarif.path "$gl_sarif" ./... >' + stdout.path + " 2>&1"
     copy_sarif = 'cp "$gl_sarif" ' + sarif.path
 
     # $1 is the golangci-lint binary path; "$@" (after shift) are its args. We
@@ -155,10 +155,10 @@ def golangci_lint_action(ctx, executable, driver, pkg_info, sdk, stdlib, config,
     # format's {} fields.
     if exit_code:
         # golangci-lint exits 1 when issues are found; capture rather than fail.
-        command = goroot_prologue + sarif_setup + 'bin="$1"; shift; ' + run_golangci + '; echo $? >' + exit_code.path + '; ' + copy_sarif
+        command = goroot_prologue + sarif_setup + 'bin="$1"; shift; ' + run_golangci + "; echo $? >" + exit_code.path + "; " + copy_sarif
         outputs.append(exit_code)
     else:
-        command = goroot_prologue + sarif_setup + 'bin="$1"; shift; ' + run_golangci + '; ' + copy_sarif
+        command = goroot_prologue + sarif_setup + 'bin="$1"; shift; ' + run_golangci + "; " + copy_sarif
 
     run_args = ctx.actions.args()
     run_args.add(executable.path)
@@ -314,7 +314,7 @@ def lint_golangci_lint_aspect(binary, config, rule_kinds = ["go_library", "go_bi
     """A factory function to create a golangci-lint linter aspect.
 
     Attrs:
-        binary: a golangci-lint executable, typically `@aspect_rules_lint//lint:golangci_lint_bin`.
+        binary: a golangci-lint executable, typically `@rules_lint//lint:golangci_lint_bin`.
         config: the `.golangci.yml` config file.
         rule_kinds: which rule kinds to visit; defaults to go_library, go_binary, go_test.
 

@@ -137,7 +137,7 @@ Linters which are not language-specific:
 | CUDA               | [clang-format]            |                                                         |
 | CSS, Less, SCSS    | [Prettier]                | [Stylelint]                                             |
 | F#                 | [Fantomas]                |                                                         |
-| Go                 | [gofmt] or [gofumpt]      | [golangci-lint] |
+| Go                 | [gofmt] or [gofumpt]      | [golangci-lint]                                         |
 | Go Module          | [modfmt]                  |                                                         |
 | Gherkin            | [prettier-plugin-gherkin] |                                                         |
 | GraphQL            | [Prettier]                |                                                         |
