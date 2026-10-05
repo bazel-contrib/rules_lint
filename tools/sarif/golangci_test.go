@@ -17,7 +17,7 @@ func TestGolangciSarifNormalization(t *testing.T) {
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			input := `{"version":"2.1.0","runs":[{"tool":{"driver":{"name":"golangci-lint"}},"results":[{"message":{"text":"finding"},"locations":[{"physicalLocation":{"artifactLocation":{"uri":"` + tc.uri + `"},"region":{"startLine":7}}}]}]}]}`
-			got, err := ToSarifJsonString("//src:hello", "AspectRulesLintGolangciLint", input)
+			got, err := ToSarifJsonString("//src:hello", "AspectRulesLintGolangciLint", input, "", "")
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -49,13 +49,13 @@ func TestGolangciSarifNormalization(t *testing.T) {
 
 func TestGolangciSarifEmptyAndInvalid(t *testing.T) {
 	for _, input := range []string{"", " \n"} {
-		got, err := ToSarifJsonString("//:target", "AspectRulesLintGolangciLint", input)
+		got, err := ToSarifJsonString("//:target", "AspectRulesLintGolangciLint", input, "", "")
 		if err != nil || !json.Valid([]byte(got)) || !strings.Contains(got, `"runs":[]`) {
 			t.Errorf("empty report: got %q, %v", got, err)
 		}
 	}
 	for _, input := range []string{"broken", "{", "null", "[]"} {
-		if _, err := ToSarifJsonString("//:target", "AspectRulesLintGolangciLint", input); err == nil {
+		if _, err := ToSarifJsonString("//:target", "AspectRulesLintGolangciLint", input, "", ""); err == nil {
 			t.Errorf("invalid report %q accepted", input)
 		}
 	}
