@@ -255,6 +255,11 @@ jobs:
       - uses: aspect-build/setup-aspect@ebca96eb49ef58c00d4226de8bd3a0813507dd87 # v2026.38.3
         with:
           aspect-api-token: ${{ secrets.ASPECT_CLOUD_API_TOKEN }}
+      # The formatter tests run under macOS's /bin/bash 3.2 and BSD utilities.
+      - name: Test formatters
+        env:
+          USE_BAZEL_VERSION: ${{ matrix.version }}
+        run: bazel test //format/...
       - name: Test
         # Reduce time on macos runners by testing one example
         working-directory: examples/java
