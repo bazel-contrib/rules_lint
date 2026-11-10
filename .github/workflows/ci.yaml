@@ -62,7 +62,7 @@ jobs:
         folder: ${{ fromJson(needs.list-examples.outputs.format-matrix) }}
     steps:
       - uses: actions/checkout@v6
-      - uses: bazel-contrib/setup-bazel@104e3eea9447cdaa4b00d0fb46191a3985d26ab3 # 0.19.1
+      - uses: bazel-contrib/setup-bazel@f34d6a05eae3c24acab7fa54587492daeaeffdab # 0.19.2
         with: &bazelrc
           bazelrc: |
             common     --show_progress_rate_limit=60
@@ -157,7 +157,7 @@ jobs:
         folder: ${{ fromJson(needs.list-examples.outputs.lint-matrix) }}
     steps:
       - uses: actions/checkout@v6
-      - uses: bazel-contrib/setup-bazel@104e3eea9447cdaa4b00d0fb46191a3985d26ab3 # 0.19.1
+      - uses: bazel-contrib/setup-bazel@f34d6a05eae3c24acab7fa54587492daeaeffdab # 0.19.2
         with: *bazelrc
       - uses: aspect-build/setup-aspect@ebca96eb49ef58c00d4226de8bd3a0813507dd87 # v2026.38.3
         with:
@@ -246,7 +246,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v6
-      - uses: bazel-contrib/setup-bazel@104e3eea9447cdaa4b00d0fb46191a3985d26ab3 # 0.19.1
+      - uses: bazel-contrib/setup-bazel@f34d6a05eae3c24acab7fa54587492daeaeffdab # 0.19.2
         with:
           repository-cache: ${{ inputs.mount_bazel_caches }}
           bazelrc: |
@@ -266,3 +266,42 @@ jobs:
         env:
           USE_BAZEL_VERSION: ${{ matrix.version }}
         run: bazel test //...
+
+  ty-integration:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        rules-python: [pinned, 2.5.0-rc0]
+    env:
+      USE_BAZEL_VERSION: "8.x"
+    steps:
+      - uses: actions/checkout@v6
+      - uses: bazel-contrib/setup-bazel@f34d6a05eae3c24acab7fa54587492daeaeffdab # 0.19.2
+      - name: Test Python type-only dependencies
+        run: examples/python/test/ty_compatibility.sh "${{ matrix.rules-python }}" --test_output=errors
+
+  # Single stable check name for branch protection: the matrix job names above
+  # change whenever an example is added or removed, so main requires only this.
+  test-all:
+    name: test-all
+    runs-on: ubuntu-latest
+    needs: [format, format-aspect-cli, integration-test, lint, lint-aspect-cli, aspect-test, test, ty-integration]
+    if: always()
+    steps:
+      - name: All required jobs succeeded
+        env:
+          NEEDS: ${{ toJSON(needs) }}
+        run: |
+          set -euo pipefail
+          names=$(jq -r 'keys[]' <<<"${NEEDS}")
+          [ -n "${names}" ]
+          status=0
+          for name in ${names}; do
+              result=$(jq -r --arg n "${name}" '.[$n].result' <<<"${NEEDS}")
+              if [ "${result}" != "success" ]; then
+                  echo "Required job did not succeed: ${name}=${result}"
+                  status=1
+              fi
+          done
+          exit "${status}"
