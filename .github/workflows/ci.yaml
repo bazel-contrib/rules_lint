@@ -14,20 +14,10 @@ concurrency:
 permissions:
   id-token: write
 
-# Points the Aspect CLI at the committed `.aspect/config.json`, which is what
-# tells it cache.aspect.build and bes.aspect.build belong to Aspect Cloud. The
-# CI login records a credential but no endpoints, so nothing else supplies them.
-# Pinned to the checkout root because the example jobs run from subdirectories;
-# it selects only the deployment list, never which `.aspect/config.axl` loads.
-#
-# REMOTE_FLAG is empty on a fork PR, which gets no org secrets: setup-aspect's
-# `aspect auth login --with-api-token` never runs there, so `--remote` would
-# reach Aspect Cloud with no credential.
-env:
-  ASPECT_WORKSPACE: ${{ github.workspace }}
-  REMOTE_FLAG: ${{ secrets.ASPECT_OSS_API_TOKEN != '' && '--remote' || '' }}
-  BAZEL_ASPECT_FLAGS: ${{ secrets.ASPECT_OSS_API_TOKEN != '' && '--config=aspect-cloud' || '' }}
-
+# Aspect Cloud needs no per-command flag. setup-aspect runs `aspect setup
+# bazelrc`, which writes `~/.aspect/bazelrc` enabling the remote cache and BES
+# for vanilla `bazel`, and `aspect <task>` defaults to `--remote=auto`. Both
+# leave Aspect Cloud off when there is no credential, as on a fork PR.
 jobs:
   list-examples:
     runs-on: ubuntu-latest
@@ -47,49 +37,60 @@ jobs:
       - name: "List examples that have a tools/format folder"
         id: set-format-matrix
         run: |
-          folders=$(find examples -type d -path "*/tools/format" | sed 's|/tools/format||' | jq -R -s -c 'split("\n") | map(select(length > 0))')
-          echo "matrix=$folders" >> "$GITHUB_OUTPUT"
-          echo "Generated format matrix: $folders"
+          matrix=$(find examples -type d -path "*/tools/format" | sed 's|/tools/format||' | jq -R -s -c 'split("\n") | map(select(length > 0)) | {folder: .}')
+          echo "matrix=$matrix" >> "$GITHUB_OUTPUT"
+          echo "Generated format matrix: $matrix"
       - name: "List examples that have a tools/lint folder"
         id: set-lint-matrix
         run: |
-          folders=$(find examples -type d -path "*/tools/lint" | sed 's|/tools/lint||' | jq -R -s -c 'split("\n") | map(select(length > 0))')
-          echo "matrix=$folders" >> "$GITHUB_OUTPUT"
-          echo "Generated lint matrix: $folders"
+          matrix=$(find examples -type d -path "*/tools/lint" | sed 's|/tools/lint||' | jq -R -s -c 'split("\n") | map(select(length > 0)) | {folder: .}')
+          echo "matrix=$matrix" >> "$GITHUB_OUTPUT"
+          echo "Generated lint matrix: $matrix"
       - name: "Find all examples that have test/*.bats files"
         id: set-test-matrix
         run: |
-          folders=$(find examples -name "*.bats" -path "*/test/*" | sed 's|/test/.*||' | sort -u | jq -R -s -c 'split("\n") | map(select(length > 0))')
-          echo "matrix=$folders" >> "$GITHUB_OUTPUT"
-          echo "Generated test matrix: $folders"
+          # FIXME: the excluded examples are failing; diagnose before enabling them.
+          matrix=$(find examples -name "*.bats" -path "*/test/*" | sed 's|/test/.*||' | sort -u | jq -R -s -c '
+            split("\n") | map(select(length > 0)) |
+            {
+              folder: .,
+              include: [{folder: "format"}],
+              exclude: [
+                {folder: "examples/python"},
+                {folder: "examples/cpp"},
+                {folder: "examples/java"},
+                {folder: "examples/shell"}
+              ]
+            }')
+          echo "matrix=$matrix" >> "$GITHUB_OUTPUT"
+          echo "Generated test matrix: $matrix"
   format:
     needs: list-examples
     # Our version of clang-format has some deps that aren't satisfiable on newer ubuntu yet
     runs-on: ${{ matrix.folder == 'examples/cpp' && 'ubuntu-22.04' || 'ubuntu-24.04' }}
     strategy:
       fail-fast: false
-      matrix:
-        folder: ${{ fromJson(needs.list-examples.outputs.format-matrix) }}
+      matrix: ${{ fromJson(needs.list-examples.outputs.format-matrix) }}
     steps:
       - uses: actions/checkout@v6
-      - uses: bazel-contrib/setup-bazel@c5acdfb288317d0b5c0bbd7a396a3dc868bb0f86 # 0.19.0
+      - uses: bazel-contrib/setup-bazel@f34d6a05eae3c24acab7fa54587492daeaeffdab # 0.19.2
         with: &bazelrc
           bazelrc: |
             common     --show_progress_rate_limit=60
             common     --show_timestamps
-            build:lint --no@aspect_rules_lint//lint:color
-      # `aspect` must be on PATH: the rc's aspect-cloud section authenticates
-      # through the `aspect get` credential helper.
-      - uses: aspect-build/setup-aspect@b1e9d142e86f63c10d603304daa22bf80492e24c # v2026.25.1
+            build:lint --no@rules_lint//lint:color
+      # `aspect` must be on PATH: the rc's aspect-cloud section uses it as the
+      # credential helper for cache.aspect.build and bes.aspect.build.
+      - uses: aspect-build/setup-aspect@ebca96eb49ef58c00d4226de8bd3a0813507dd87 # v2026.38.3
         with:
-          aspect-api-token: ${{ secrets.ASPECT_OSS_API_TOKEN }}
+          aspect-api-token: ${{ secrets.ASPECT_CLOUD_API_TOKEN }}
       # Permit this gross non-hermetic dependency
       - if: matrix.folder == 'examples/cpp'
         run: sudo apt-get update && sudo apt-get install -y libtinfo5
       # TODO: Fix for Bazel 9
       - if: matrix.folder == 'examples/csharp' || matrix.folder == 'examples/fsharp' || matrix.folder == 'examples/nodejs'
         run: echo "USE_BAZEL_VERSION=8.x" >> "$GITHUB_ENV"
-      - run: bazel run $BAZEL_ASPECT_FLAGS //tools/format
+      - run: bazel run //tools/format
         working-directory: ${{ matrix.folder }}
   # Same examples as `format`, exercised through `aspect format` — the
   # better-DX entry point users actually run. `aspect format` defaults to the
@@ -103,43 +104,33 @@ jobs:
     runs-on: ${{ matrix.folder == 'examples/cpp' && 'ubuntu-22.04' || 'ubuntu-24.04' }}
     strategy:
       fail-fast: false
-      matrix:
-        folder: ${{ fromJson(needs.list-examples.outputs.format-matrix) }}
+      matrix: ${{ fromJson(needs.list-examples.outputs.format-matrix) }}
     steps:
       - uses: actions/checkout@v6
-      - uses: aspect-build/setup-aspect@b1e9d142e86f63c10d603304daa22bf80492e24c # v2026.25.1
+      - uses: aspect-build/setup-aspect@ebca96eb49ef58c00d4226de8bd3a0813507dd87 # v2026.38.3
         with:
-          aspect-api-token: ${{ secrets.ASPECT_OSS_API_TOKEN }}
+          aspect-api-token: ${{ secrets.ASPECT_CLOUD_API_TOKEN }}
       # Permit this gross non-hermetic dependency
       - if: matrix.folder == 'examples/cpp'
         run: sudo apt-get update && sudo apt-get install -y libtinfo5
       # TODO: Fix for Bazel 9
       - if: matrix.folder == 'examples/csharp' || matrix.folder == 'examples/fsharp' || matrix.folder == 'examples/nodejs'
         run: echo "USE_BAZEL_VERSION=8.x" >> "$GITHUB_ENV"
-      - run: aspect format $REMOTE_FLAG --scope=all --severity=warn
+      - run: aspect format --scope=all --severity=warn
         working-directory: ${{ matrix.folder }}
   integration-test:
     needs: list-examples
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
-      matrix:
-        folder: ${{ fromJson(needs.list-examples.outputs.test-matrix) }}
-        include:
-          - folder: format
-        exclude:
-          # FIXME: these are failing, diagnose.
-          - folder: examples/python
-          - folder: examples/cpp
-          - folder: examples/java
-          - folder: examples/shell
+      matrix: ${{ fromJson(needs.list-examples.outputs.test-matrix) }}
     steps:
       - uses: actions/checkout@v6
       # The lint_test.bats in each example shell out to `aspect lint`, so this
-      # job needs the token too — they pick up $REMOTE_FLAG from the job env.
-      - uses: aspect-build/setup-aspect@b1e9d142e86f63c10d603304daa22bf80492e24c # v2026.25.1
+      # job needs the token too.
+      - uses: aspect-build/setup-aspect@ebca96eb49ef58c00d4226de8bd3a0813507dd87 # v2026.38.3
         with:
-          aspect-api-token: ${{ secrets.ASPECT_OSS_API_TOKEN }}
+          aspect-api-token: ${{ secrets.ASPECT_CLOUD_API_TOKEN }}
       - name: Setup bats
         uses: mig4/setup-bats@af9a00deb21b5d795cabfeaa8d9060410377686d # v1
         with:
@@ -163,15 +154,14 @@ jobs:
     runs-on: ubuntu-24.04
     strategy:
       fail-fast: false
-      matrix:
-        folder: ${{ fromJson(needs.list-examples.outputs.lint-matrix) }}
+      matrix: ${{ fromJson(needs.list-examples.outputs.lint-matrix) }}
     steps:
       - uses: actions/checkout@v6
-      - uses: bazel-contrib/setup-bazel@c5acdfb288317d0b5c0bbd7a396a3dc868bb0f86 # 0.19.0
+      - uses: bazel-contrib/setup-bazel@f34d6a05eae3c24acab7fa54587492daeaeffdab # 0.19.2
         with: *bazelrc
-      - uses: aspect-build/setup-aspect@b1e9d142e86f63c10d603304daa22bf80492e24c # v2026.25.1
+      - uses: aspect-build/setup-aspect@ebca96eb49ef58c00d4226de8bd3a0813507dd87 # v2026.38.3
         with:
-          aspect-api-token: ${{ secrets.ASPECT_OSS_API_TOKEN }}
+          aspect-api-token: ${{ secrets.ASPECT_CLOUD_API_TOKEN }}
       # TODO: Fix for Bazel 9
       - if: matrix.folder == 'examples/cpp' || matrix.folder == 'examples/fsharp' || matrix.folder == 'examples/kotlin' || matrix.folder == 'examples/nodejs'
         run: echo "USE_BAZEL_VERSION=8.x" >> "$GITHUB_ENV"
@@ -179,11 +169,11 @@ jobs:
       - name: Lint
         working-directory: ${{ matrix.folder }}
         run: |
-          bazel build $BAZEL_ASPECT_FLAGS --config=lint --output_groups=rules_lint_human //...
+          bazel build --config=lint --output_groups=rules_lint_human //...
 
-          bazel build $BAZEL_ASPECT_FLAGS --config=lint \
+          bazel build --config=lint \
             --output_groups=rules_lint_patch \
-            --@aspect_rules_lint//lint:fix \
+            --@rules_lint//lint:fix \
             //...
   # Same examples as `lint`, exercised through `aspect lint` — the
   # better-DX entry point users actually run. Each example registers its
@@ -198,13 +188,12 @@ jobs:
     runs-on: ubuntu-24.04
     strategy:
       fail-fast: false
-      matrix:
-        folder: ${{ fromJson(needs.list-examples.outputs.lint-matrix) }}
+      matrix: ${{ fromJson(needs.list-examples.outputs.lint-matrix) }}
     steps:
       - uses: actions/checkout@v6
-      - uses: aspect-build/setup-aspect@b1e9d142e86f63c10d603304daa22bf80492e24c # v2026.25.1
+      - uses: aspect-build/setup-aspect@ebca96eb49ef58c00d4226de8bd3a0813507dd87 # v2026.38.3
         with:
-          aspect-api-token: ${{ secrets.ASPECT_OSS_API_TOKEN }}
+          aspect-api-token: ${{ secrets.ASPECT_CLOUD_API_TOKEN }}
       # TODO: Fix for Bazel 9
       - if: matrix.folder == 'examples/cpp' || matrix.folder == 'examples/fsharp' || matrix.folder == 'examples/kotlin' || matrix.folder == 'examples/nodejs'
         run: echo "USE_BAZEL_VERSION=8.x" >> "$GITHUB_ENV"
@@ -215,8 +204,8 @@ jobs:
           folder: ${{ matrix.folder }}
         run: |
           key="lint-${folder//\//-}"
-          aspect lint $REMOTE_FLAG --task:name="$key" --strategy=soft -- //...
-          aspect lint $REMOTE_FLAG --task:name="$key-fix" --fix --strategy=soft -- //...
+          aspect lint --task:name="$key" --strategy=soft -- //...
+          aspect lint --task:name="$key-fix" --fix --strategy=soft -- //...
   # Build & test the root workspace through `aspect test` on Linux across Bazel
   # versions. Complements `test` below, which covers macOS via vanilla Bazel.
   aspect-test:
@@ -235,12 +224,12 @@ jobs:
       USE_BAZEL_VERSION: ${{ matrix.bazel.version }}
     steps:
       - uses: actions/checkout@v6
-      - uses: aspect-build/setup-aspect@b1e9d142e86f63c10d603304daa22bf80492e24c # v2026.25.1
+      - uses: aspect-build/setup-aspect@ebca96eb49ef58c00d4226de8bd3a0813507dd87 # v2026.38.3
         with:
-          aspect-api-token: ${{ secrets.ASPECT_OSS_API_TOKEN }}
+          aspect-api-token: ${{ secrets.ASPECT_CLOUD_API_TOKEN }}
       - name: Test
         working-directory: ${{ matrix.workspace.path }}
-        run: aspect test $REMOTE_FLAG --task:name=test-${{ matrix.workspace.slug }}-${{ matrix.bazel.id }} ${{ matrix.bazel.flags }} -- //...
+        run: aspect test --task:name=test-${{ matrix.workspace.slug }}-${{ matrix.bazel.id }} ${{ matrix.bazel.flags }} -- //...
   test:
     strategy:
       matrix:
@@ -256,18 +245,67 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v6
-      - uses: bazel-contrib/setup-bazel@c5acdfb288317d0b5c0bbd7a396a3dc868bb0f86 # 0.19.0
+      - uses: bazel-contrib/setup-bazel@f34d6a05eae3c24acab7fa54587492daeaeffdab # 0.19.2
         with:
           repository-cache: ${{ inputs.mount_bazel_caches }}
           bazelrc: |
             common --announce_rc
             common --color=yes
-      - uses: aspect-build/setup-aspect@b1e9d142e86f63c10d603304daa22bf80492e24c # v2026.25.1
+      - uses: aspect-build/setup-aspect@ebca96eb49ef58c00d4226de8bd3a0813507dd87 # v2026.38.3
         with:
-          aspect-api-token: ${{ secrets.ASPECT_OSS_API_TOKEN }}
+          aspect-api-token: ${{ secrets.ASPECT_CLOUD_API_TOKEN }}
       - name: Test
         # Reduce time on macos runners by testing one example
         working-directory: examples/java
         env:
           USE_BAZEL_VERSION: ${{ matrix.version }}
-        run: bazel test $BAZEL_ASPECT_FLAGS //...
+        run: bazel test //...
+
+  ty-integration:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        rules-python: [pinned, 2.5.0-rc0]
+    env:
+      USE_BAZEL_VERSION: "8.x"
+    steps:
+      - uses: actions/checkout@v6
+      - uses: bazel-contrib/setup-bazel@f34d6a05eae3c24acab7fa54587492daeaeffdab # 0.19.2
+      - name: Test Python type-only dependencies
+        run: examples/python/test/ty_compatibility.sh "${{ matrix.rules-python }}" --test_output=errors
+
+  # Single stable check name for branch protection: the matrix job names above
+  # change whenever an example is added or removed, so main requires only this.
+  test-all:
+    name: test-all
+    runs-on: ubuntu-latest
+    needs:
+      [
+        format,
+        format-aspect-cli,
+        integration-test,
+        lint,
+        lint-aspect-cli,
+        aspect-test,
+        test,
+        ty-integration,
+      ]
+    if: always()
+    steps:
+      - name: All required jobs succeeded
+        env:
+          NEEDS: ${{ toJSON(needs) }}
+        run: |
+          set -euo pipefail
+          names=$(jq -r 'keys[]' <<<"${NEEDS}")
+          [ -n "${names}" ]
+          status=0
+          for name in ${names}; do
+              result=$(jq -r --arg n "${name}" '.[$n].result' <<<"${NEEDS}")
+              if [ "${result}" != "success" ]; then
+                  echo "Required job did not succeed: ${name}=${result}"
+                  status=1
+              fi
+          done
+          exit "${status}"

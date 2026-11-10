@@ -6,10 +6,10 @@ Ty is provided as a built-in tool by rules_lint. To use the built-in version,
 create the linter aspect, typically in `tools/lint/linters.bzl`:
 
 ```starlark
-load("@aspect_rules_lint//lint:ty.bzl", "lint_ty_aspect")
+load("@rules_lint//lint:ty.bzl", "lint_ty_aspect")
 
 ty = lint_ty_aspect(
-    binary = Label("@aspect_rules_lint//lint:ty_bin"),
+    binary = Label("@rules_lint//lint:ty_bin"),
     config = Label("//:ty.toml"),
 )
 ```
@@ -193,9 +193,14 @@ def _ty_aspect_impl(target, ctx):
         if hasattr(ctx.rule.attr, attr_name):
             for dep in getattr(ctx.rule.attr, attr_name):
                 if PyInfo in dep:
-                    transitive_sources.append(dep[PyInfo].transitive_sources)
-                    transitive_sources.append(dep[PyInfo].transitive_pyi_files)
-                    imports = dep[PyInfo].imports.to_list()
+                    infos = [dep[PyInfo]]
+                    type_checking_info = getattr(dep[PyInfo], "type_checking_info", None)
+                    if type_checking_info != None:
+                        infos.append(type_checking_info)
+                    for info in infos:
+                        transitive_sources.append(info.transitive_sources)
+                        transitive_sources.append(info.transitive_pyi_files)
+                    imports = depset(transitive = [info.imports for info in infos]).to_list()
                     if imports:
                         for import_path in imports:
                             resolved = _resolve_import_path(import_path, ctx.workspace_name, ctx.bin_dir.path)
@@ -217,7 +222,7 @@ def _ty_aspect_impl(target, ctx):
     # Pass transitive sources to ty_action so ty can resolve imports from dependencies
     transitive_srcs_depset = depset(transitive = transitive_sources)
     extra_search_paths = import_paths.keys()
-    ty_action(ctx, ctx.executable._ty, files_to_lint, transitive_srcs_depset, ctx.files._config_file, outputs.human.out, outputs.human.exit_code, env = color_env, extra_search_paths = extra_search_paths, args = ctx.attr._args)
+    ty_action(ctx, ctx.executable._ty, files_to_lint, transitive_srcs_depset, ctx.files._config_file, outputs.human.out, outputs.human.exit_code, env = color_env, extra_search_paths = extra_search_paths, color = ctx.attr._options[LintOptionsInfo].color, args = ctx.attr._args)
 
     raw_machine_report = ctx.actions.declare_file(OUTFILE_FORMAT.format(label = target.label.name, mnemonic = _MNEMONIC, suffix = "raw_machine_report"))
     ty_action(ctx, ctx.executable._ty, files_to_lint, transitive_srcs_depset, ctx.files._config_file, raw_machine_report, outputs.machine.exit_code, extra_search_paths = extra_search_paths, color = False, args = ctx.attr._args)
