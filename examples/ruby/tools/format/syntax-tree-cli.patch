@@ -1,28 +1,29 @@
-From 33cfdf862e82713127dd8ed7a8cf4f3c4d29ec7e Mon Sep 17 00:00:00 2001
+From bd58214b47ec69288733521ae5694b8fc351fa14 Mon Sep 17 00:00:00 2001
 From: Alex Eagle <aeagle@figma.com>
 Date: Mon, 26 Oct 2026 15:29:17 -0700
 Subject: [PATCH] Preserve workspace paths and skip symlinks in the formatter
  CLI
 
 ---
- lib/syntax_tree/cli.rb | 6 ++++++
- 1 file changed, 6 insertions(+)
+ lib/syntax_tree/cli.rb | 7 +++++++
+ 1 file changed, 7 insertions(+)
 
 diff --git a/lib/syntax_tree/cli.rb b/lib/syntax_tree/cli.rb
-index f2616c8..fd87440 100644
+index f2616c8..977471f 100644
 --- a/lib/syntax_tree/cli.rb
 +++ b/lib/syntax_tree/cli.rb
-@@ -563,6 +563,9 @@ module SyntaxTree
+@@ -563,6 +563,10 @@ module SyntaxTree
        # Run the CLI over the given array of strings that make up the arguments
        # passed to the invocation.
        def run(argv)
 +        # Ruby launchers start in runfiles; restore the invoking directory for config and paths.
-+        Dir.chdir(ENV["BUILD_WORKING_DIRECTORY"] || ENV["BUILD_WORKSPACE_DIRECTORY"]) if ENV["BUILD_WORKING_DIRECTORY"] || ENV["BUILD_WORKSPACE_DIRECTORY"]
++        bazel_wd = ENV["BUILD_WORKING_DIRECTORY"] || ENV["BUILD_WORKSPACE_DIRECTORY"]
++        Dir.chdir(bazel_wd) if bazel_wd
 +
          name, *arguments = argv
  
          config_file = ConfigFile.new
-@@ -619,6 +622,9 @@ module SyntaxTree
+@@ -619,6 +623,9 @@ module SyntaxTree
              Dir
                .glob(pattern)
                .each do |filepath|
