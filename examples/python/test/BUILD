@@ -1,7 +1,7 @@
 "Demonstrates how to enforce zero-lint-tolerance policy with tests"
 
 # buildifier: disable=bzl-visibility
-load("@aspect_rules_lint//lint/private:machine_report_testing.bzl", "report_test")  # @unused: used in commented-out tests
+load("@rules_lint//lint/private:machine_report_testing.bzl", "report_test")  # @unused: used in commented-out tests
 load("@bazel_skylib//rules:write_file.bzl", "write_file")
 load("@rules_python//python:defs.bzl", "py_library")
 load(
@@ -88,6 +88,12 @@ pydoclint_test(
 pydoclint_test(
     name = "pydoclint_should_ignore_generated_filegroup",
     srcs = [":generated_py_filegroup"],
+)
+
+# Regression test for https://github.com/aspect-build/rules_lint/issues/303
+ruff_test(
+    name = "ruff_recognizes_first_party_imports",
+    srcs = ["//src/first_party_imports:uses_first_party"],
 )
 
 ruff_test(
