@@ -153,13 +153,10 @@ func (pr *PackageRegistry) Match(labels []string) ([]string, []*packages.Package
 			label = fmt.Sprintf("@%s", label)
 		}
 
-		if label == RulesGoStdlibLabel {
-			// For stdlib, we need to append all the subpackages as roots
-			// since RulesGoStdLibLabel doesn't actually show up in the stdlib pkg.json
-			for _, pkg := range pr.stdlib {
-				roots[pkg.ID] = struct{}{}
-			}
-		} else if _, ok := pr.packagesByID[label]; ok {
+		// rules_lint modification: roots are concrete package labels supplied
+		// by the aspect. The upstream aggregate stdlib-target special case is
+		// unused here; stdlib packages are reached through package imports.
+		if _, ok := pr.packagesByID[label]; ok {
 			roots[label] = struct{}{}
 			// If an xtest package exists for this package add it to the roots
 			if _, ok := pr.packagesByID[label+"_xtest"]; ok {

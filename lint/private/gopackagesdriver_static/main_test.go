@@ -48,7 +48,7 @@ func TestRunResolvesAndInjects(t *testing.T) {
 	mustWrite(t, bitsSrc, "package bits\n\nconst UintSize = 64\n")
 
 	rootID := "@@//example/foo:foo"
-	stdlibID := "@@rules_go~//stdlib:math/bits"
+	stdlibID := "@@renamed_go_rules+custom//stdlib:math/bits"
 
 	rootJSON := `{
   "ID": "` + rootID + `",
@@ -136,4 +136,16 @@ func pkgIDs(pkgs []*packages.Package) []string {
 		ids = append(ids, p.ID)
 	}
 	return ids
+}
+
+// Concrete roots must work independently of rules_go's apparent or canonical
+// repository name. Standard packages join the graph through imports only.
+func TestMatchConcreteRoots(t *testing.T) {
+	registry := NewPackageRegistry(bazelVersion{})
+	registry.Add(&FlatPackage{ID: "@@custom_main//pkg:lib", Name: "pkg", PkgPath: "example/pkg"})
+	registry.Add(&FlatPackage{ID: "@@renamed_go_rules+//stdlib:fmt", Name: "fmt", PkgPath: "fmt", Standard: true})
+	roots, pkgs := registry.Match([]string{"@@custom_main//pkg:lib"})
+	if len(roots) != 1 || roots[0] != "@@custom_main//pkg:lib" || len(pkgs) != 1 {
+		t.Fatalf("Match = %v, %v; want only concrete root", roots, pkgIDs(pkgs))
+	}
 }

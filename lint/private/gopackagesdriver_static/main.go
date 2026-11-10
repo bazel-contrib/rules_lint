@@ -32,12 +32,6 @@ import (
 	"golang.org/x/tools/go/packages"
 )
 
-// RulesGoStdlibLabel is referenced by PackageRegistry.Match. The bazel half of
-// the upstream driver defined it; the static driver never receives this label
-// as a root (stdlib packages are pulled in transitively by the import walk),
-// but the symbol must exist for the vendored registry to compile.
-const RulesGoStdlibLabel = "@io_bazel_rules_go//:stdlib"
-
 // workspaceRoot is referenced by the vendored utils.go helpers. The static
 // driver resolves paths via pathResolver() rather than these helpers, but the
 // symbol must exist for the package to compile.

@@ -194,72 +194,19 @@ def _normalize_sarif_action(ctx, raw_sarif, normalized_sarif):
         raw_sarif: the SARIF file produced by golangci-lint
         normalized_sarif: the rewritten, workspace-relative SARIF (machine output)
     """
-    ctx.actions.run_shell(
+    args = ctx.actions.args()
+    args.add("-in", raw_sarif.path)
+    args.add("-out", normalized_sarif.path)
+    args.add("-label", ctx.label)
+    args.add("-mnemonic", _MNEMONIC)
+    ctx.actions.run(
         inputs = [raw_sarif],
         outputs = [normalized_sarif],
-        command = _SARIF_NORMALIZE_SCRIPT.format(
-            src = raw_sarif.path,
-            dst = normalized_sarif.path,
-        ),
+        executable = ctx.executable._sarif_parser,
+        arguments = [args],
         mnemonic = _MNEMONIC + "Sarif",
         progress_message = "Normalizing golangci-lint SARIF URIs for %{label}",
     )
-
-# A small python3 post-processor. Each result URI is rewritten to the path
-# following "/execroot/<repo>/" (the portable, workspace-relative path). A URI
-# with no "/execroot/" segment (e.g. non-sandboxed local execution that already
-# emitted a relative path) is returned as-is apart from stripping a leading
-# "./". Empty input (no findings / empty file) yields a minimal valid empty
-# SARIF document.
-_SARIF_NORMALIZE_SCRIPT = """\
-python3 - "{src}" "{dst}" <<'PY'
-import json, os, sys
-src, dst = sys.argv[1], sys.argv[2]
-EMPTY = {{"version": "2.1.0", "$schema": "https://json.schemastore.org/sarif-2.1.0.json", "runs": []}}
-try:
-    with open(src) as f:
-        raw = f.read().strip()
-    doc = json.loads(raw) if raw else EMPTY
-except (ValueError, OSError):
-    doc = EMPTY
-
-def normalize_uri(uri):
-    if not uri:
-        return uri
-    # Drop a file:// scheme if present.
-    if uri.startswith("file://"):
-        uri = uri[len("file://"):]
-    # golangci-lint emits paths relative to its working directory, which under
-    # Bazel sandboxing resolves through a long "../" climb into the absolute
-    # sandbox execroot (e.g. "../../../<abs>/execroot/_main/tools/sarif/sarif.go").
-    # The portable, workspace-relative path is whatever follows
-    # "execroot/<repo>/": for the main repo that yields "tools/sarif/sarif.go",
-    # and for dependencies "external/...", which reads as clearly non-local.
-    marker = "/execroot/"
-    i = uri.find(marker)
-    if i != -1:
-        rest = uri[i + len(marker):]          # e.g. "_main/tools/sarif/sarif.go"
-        j = rest.find("/")                    # drop the leading "<repo>/" segment
-        return rest[j + 1:] if j != -1 else rest
-    # No "/execroot/" segment: non-sandboxed execution that already emitted a
-    # relative path. Return as-is apart from a leading "./" — crucially do NOT
-    # drop ".." segments, which would silently produce a wrong path.
-    if uri.startswith("./"):
-        uri = uri[2:]
-    return uri
-
-for run in doc.get("runs", []):
-    for result in run.get("results", []):
-        for loc in result.get("locations", []):
-            phys = loc.get("physicalLocation", {{}})
-            art = phys.get("artifactLocation")
-            if art and "uri" in art:
-                art["uri"] = normalize_uri(art["uri"])
-
-with open(dst, "w") as f:
-    json.dump(doc, f, indent=2)
-PY
-"""
 
 # buildifier: disable=function-docstring
 def _golangci_lint_aspect_impl(target, ctx):
@@ -337,6 +284,11 @@ def lint_golangci_lint_aspect(binary, config, rule_kinds = ["go_library", "go_bi
             ),
             "_driver": attr.label(
                 default = Label("//lint/private/gopackagesdriver_static:gopackagesdriver_static"),
+                executable = True,
+                cfg = "exec",
+            ),
+            "_sarif_parser": attr.label(
+                default = Label("//tools/sarif/cmd/sarif"),
                 executable = True,
                 cfg = "exec",
             ),
