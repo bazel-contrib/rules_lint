@@ -6,32 +6,32 @@ Each example includes a minimal working configuration for its supported tools. F
 
 ## Available Examples
 
-| Directory           | Formatter(s)                                                                  | Linter(s)                                   |
-| ------------------- | ----------------------------------------------------------------------------- | ------------------------------------------- |
-| `cpp/`              | clang-format for C, C++, and CUDA                                             | clang-tidy, Cppcheck                        |
-| `csharp/`           | CSharpier                                                                     |                                             |
-| `fsharp/`           | Fantomas                                                                      |                                             |
-| `go-module/`        | modfmt                                                                        |                                             |
-| `go/`               | gofumpt                                                                       |                                             |
-| `java/`             | google-java-format                                                            | PMD, Checkstyle, SpotBugs                   |
-| `keep-sorted/`      |                                                                               | keep-sorted                                 |
-| `kotlin/`           | ktfmt                                                                         | ktlint                                      |
-| `nodejs/`           | Prettier for JavaScript, TypeScript, Vue, CSS, Less, SCSS, HTML, and Markdown | ESLint, Stylelint, Vale                     |
-| `other_formatters/` | cue fmt, Prettier, jsonnetfmt, djlint                                         |                                             |
-| `pkl/`              | pkl format                                                                    |                                             |
-| `protobuf/`         | Buf                                                                           | Buf                                         |
-| `python/`           | Ruff                                                                          | Ruff, Bandit, Flake8, pydoclint, Pylint, ty |
-| `qml/`              | qmlformat                                                                     | qmllint                                     |
-| `ruby/`             |                                                                               | RuboCop, StandardRB                         |
-| `rust/`             | rustfmt                                                                       | Clippy                                      |
-| `scala/`            | Scalafmt                                                                      | Scalafix                                    |
-| `shell/`            | shfmt                                                                         | ShellCheck                                  |
-| `sql/`              | Prettier with its SQL plugin                                                  |                                             |
-| `starlark/`         |                                                                               | Buildifier                                  |
-| `swift/`            | SwiftFormat                                                                   |                                             |
-| `terraform/`        | terraform fmt                                                                 |                                             |
-| `toml/`             | Taplo                                                                         | Taplo                                       |
-| `xml/`              | Prettier with its XML plugin                                                  |                                             |
-| `yaml/`             | yamlfmt                                                                       | yamllint                                    |
+| Directory           | Formatter(s)                                                                           | Linter(s)                                   |
+| ------------------- | -------------------------------------------------------------------------------------- | ------------------------------------------- |
+| `cpp/`              | clang-format for C, C++, and CUDA                                                      | clang-tidy, Cppcheck                        |
+| `csharp/`           | CSharpier                                                                              |                                             |
+| `fsharp/`           | Fantomas                                                                               |                                             |
+| `go-module/`        | modfmt                                                                                 |                                             |
+| `go/`               | gofumpt                                                                                |                                             |
+| `java/`             | google-java-format                                                                     | PMD, Checkstyle, SpotBugs                   |
+| `keep-sorted/`      |                                                                                        | keep-sorted                                 |
+| `kotlin/`           | ktfmt                                                                                  | ktlint                                      |
+| `nodejs/`           | Prettier or Biome for JavaScript, TypeScript, Vue, CSS, Less, SCSS, HTML, and Markdown | Biome, ESLint, Stylelint, Vale              |
+| `other_formatters/` | cue fmt, Prettier, jsonnetfmt, djlint                                                  |                                             |
+| `pkl/`              | pkl format                                                                             |                                             |
+| `protobuf/`         | Buf                                                                                    | Buf                                         |
+| `python/`           | Ruff                                                                                   | Ruff, Bandit, Flake8, pydoclint, Pylint, ty |
+| `qml/`              | qmlformat                                                                              | qmllint                                     |
+| `ruby/`             |                                                                                        | RuboCop, StandardRB                         |
+| `rust/`             | rustfmt                                                                                | Clippy                                      |
+| `scala/`            | Scalafmt                                                                               | Scalafix                                    |
+| `shell/`            | shfmt                                                                                  | ShellCheck                                  |
+| `sql/`              | Prettier with its SQL plugin                                                           |                                             |
+| `starlark/`         |                                                                                        | Buildifier                                  |
+| `swift/`            | SwiftFormat                                                                            |                                             |
+| `terraform/`        | terraform fmt                                                                          |                                             |
+| `toml/`             | Taplo                                                                                  | Taplo                                       |
+| `xml/`              | Prettier with its XML plugin                                                           |                                             |
+| `yaml/`             | yamlfmt                                                                                | yamllint                                    |
 
 The `other_formatters/` example covers CUE, Gherkin, GraphQL, HTML Jinja templates, JSON5, and Jsonnet without creating a separate workspace for each format.
