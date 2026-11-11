@@ -31,4 +31,8 @@ RUN git clone --depth 1 --branch v1.8.2 https://github.com/bats-core/bats-core.g
 ENV BATS_LIB_PATH=/usr/local/lib/bats
 ENV CI=true BUILDKITE=true
 RUN git config --system --add safe.directory /workspace
+# rules_python's hermetic interpreter refuses to run as root.
+RUN useradd --create-home --uid 1000 tester
+ENV HOME=/home/tester
+USER tester
 WORKDIR /workspace
