@@ -1,7 +1,7 @@
 FROM ubuntu:22.04
 
 RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
-    bash build-essential ca-certificates curl git libicu70 libtinfo5 \
+    bash build-essential ca-certificates curl git libglib2.0-0 libicu70 libtinfo5 \
     python3 unzip xz-utils zip \
     && rm -rf /var/lib/apt/lists/*
 
