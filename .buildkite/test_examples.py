@@ -48,6 +48,8 @@ class PipelineTest(unittest.TestCase):
             fixture = root / "examples/nodejs/fixture"
             fixture.parent.mkdir(parents=True)
             fixture.write_text("original")
+            (fixture.parent / "test").mkdir()
+            (fixture.parent / "test/lint.bats").touch()
             for kind in ("format", "lint"):
                 (fixture.parent / "tools" / kind).mkdir(parents=True)
             for args in (
@@ -74,20 +76,34 @@ assert fixture.read_text() == 'original', 'fixtures were not restored'
 fixture.write_text('modified')
 assert 'ASPECT_API_TOKEN' not in os.environ
 assert 'ASPECT_WORKFLOWS_REMOTE_CACHE' not in os.environ
+if '--bats-probe' in sys.argv:
+    try:
+        os.fstat(3)
+    except OSError:
+        pass
+    else:
+        raise AssertionError('tool inherited Bats TAP descriptor')
 with open(os.environ['CALLS'], 'a') as log:
     log.write(json.dumps([pathlib.Path(sys.argv[0]).name, sys.argv[1:], os.environ.get('USE_BAZEL_VERSION')]) + '\\n')
 sys.exit(1 if '--output_groups=rules_lint_human' in sys.argv else 0)
 ''')
                 path.chmod(0o755)
+            # Bats creates FD 3 inside its own process, after the Python runner
+            # starts it. Simulate that so the Bazel wrapper must close the FD.
+            bats = tools / "bats"
+            bats.write_text('#!/usr/bin/env bash\nexec bazel build --bats-probe 3>"$FD3_PROBE"\n')
+            bats.chmod(0o755)
             with patch.dict(os.environ, {
                 "PATH": str(tools) + os.pathsep + os.environ["PATH"],
                 "CALLS": str(log), "ASPECT_API_TOKEN": "test-token",
                 "ASPECT_WORKFLOWS_REMOTE_CACHE": "test-endpoint",
+                "USE_BAZEL_VERSION": "7.x", "FD3_PROBE": str(temporary / "tap"),
             }), contextlib.redirect_stdout(io.StringIO()):
-                self.assertEqual(examples.run(root, "examples/nodejs", ["format", "lint"]), 1)
+                self.assertEqual(examples.run(root, "examples/nodejs", ["format", "lint", "integration"]), 1)
             calls = [json.loads(line) for line in log.read_text().splitlines()]
-            self.assertEqual(len(calls), 6)
-            self.assertTrue(all(call[2] == "8.x" for call in calls))
+            self.assertEqual(len(calls), 7)
+            self.assertTrue(all(call[2] == "8.x" for call in calls[:6]))
+            self.assertEqual(calls[-1][2], "7.x")
             for tool, args, _ in calls:
                 if tool == "aspect":
                     self.assertEqual(args[1], "--remote=none")

@@ -96,7 +96,9 @@ def run(root, folder, checks):
             "bazel": 'exec {real} --nosystem_rc --nohome_rc --bazelrc={rc} "$@"\n',
         }.items():
             path = wrappers / tool
-            path.write_text("#!/usr/bin/env bash\nset -euo pipefail\n" + body.format(
+            # Bats uses FD 3 for TAP output. A newly started Bazel server must
+            # not inherit it, or Bats waits for EOF after all tests finish.
+            path.write_text("#!/usr/bin/env bash\nset -euo pipefail\nexec 3>&-\n" + body.format(
                 real=shlex.quote(shutil.which(tool)),
                 rc=shlex.quote(str(root / ".buildkite/ci.bazelrc")),
             ))
