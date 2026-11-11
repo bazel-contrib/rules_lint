@@ -16,7 +16,7 @@ rules_go's `go_pkg_info_aspect` to obtain each package's pre-computed metadata
 (`.pkg.json`), transitive export data (`.x`), and stdlib archives, then runs the
 real golangci-lint binary against a static, file-reading `GOPACKAGESDRIVER`
 (`//lint/private/gopackagesdriver_static`). No bazel-in-bazel, no network, no
-shared module cache.
+shared module cache. Requires rules_go >= 0.61.0 for cgo test inputs.
 """
 
 load("@io_bazel_rules_go//go/private:providers.bzl", "GoStdLib")
@@ -51,6 +51,9 @@ def golangci_lint_action(ctx, executable, driver, pkg_info, sdk, stdlib, config,
     """
     json_files = pkg_info.pkg_json_files
     export_files = pkg_info.export_files
+
+    # Transitive sources, including generated sources and cgo output trees.
+    # Fact-producing analyzers must inspect dependencies on a cold cache.
     srcs = pkg_info.compiled_go_files
     stdlib_json = [pkg_info.stdlib_json_file] if pkg_info.stdlib_json_file else []
 
@@ -102,8 +105,7 @@ def golangci_lint_action(ctx, executable, driver, pkg_info, sdk, stdlib, config,
         "GOPACKAGESDRIVER_OUTPUT_BASE": ".",
         "GOFLAGS": "-mod=mod",
         "GOPROXY": "off",
-        # Dependencies are loaded as export data only (the driver strips their
-        # source). x/tools' gcimporter has a data race when decoding export data
+        # x/tools' gcimporter has a data race when decoding export data
         # concurrently (golang/go #34895, #67725, #70015); GOMAXPROCS=1 removes
         # the common multi-core trigger of "concurrent map read and map write"
         # crashes. NOTE: this is a pragmatic mitigation, not a hard guarantee —
@@ -112,11 +114,6 @@ def golangci_lint_action(ctx, executable, driver, pkg_info, sdk, stdlib, config,
         # are small so the single-threaded cost is negligible. If flakes ever
         # resurface, the real fix is upstream serialization in the importer.
         "GOMAXPROCS": "1",
-        # Keep tool caches inside the sandbox so the action stays hermetic and
-        # machine-independent (no shared GOCACHE / module cache).
-        "GOCACHE": "/tmp/rules_lint_gocache",
-        "GOLANGCI_LINT_CACHE": "/tmp/rules_lint_golangci_cache",
-        "HOME": "/tmp",
     }
 
     # GOPACKAGESDRIVER_STDLIB_PKG_DIR points at the dir that *contains* the
@@ -132,6 +129,11 @@ def golangci_lint_action(ctx, executable, driver, pkg_info, sdk, stdlib, config,
     )
 
     outputs = [stdout, sarif]
+
+    # Fixed /tmp paths share undeclared cache state between local actions.
+    # Use a fresh directory per action, including when sandboxing is disabled.
+    cache_prologue = """cache_dir="$(mktemp -d)" || exit 1; trap 'rm -rf "$cache_dir"' EXIT; """
+    cache_prologue += 'export HOME="$cache_dir" GOCACHE="$cache_dir/go" GOLANGCI_LINT_CACHE="$cache_dir/golangci"; '
 
     # GOROOT/PATH must be absolute: Go refuses to exec a `go` binary found via a
     # relative path ("cannot run executable found relative to current
@@ -155,10 +157,10 @@ def golangci_lint_action(ctx, executable, driver, pkg_info, sdk, stdlib, config,
     # format's {} fields.
     if exit_code:
         # golangci-lint exits 1 when issues are found; capture rather than fail.
-        command = goroot_prologue + sarif_setup + 'bin="$1"; shift; ' + run_golangci + "; echo $? >" + exit_code.path + "; " + copy_sarif
+        command = cache_prologue + goroot_prologue + sarif_setup + 'bin="$1"; shift; ' + run_golangci + "; echo $? >" + exit_code.path + "; " + copy_sarif
         outputs.append(exit_code)
     else:
-        command = goroot_prologue + sarif_setup + 'bin="$1"; shift; ' + run_golangci + "; " + copy_sarif
+        command = cache_prologue + goroot_prologue + sarif_setup + 'bin="$1"; shift; ' + run_golangci + "; " + copy_sarif
 
     run_args = ctx.actions.args()
     run_args.add(executable.path)

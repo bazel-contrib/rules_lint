@@ -9,3 +9,12 @@ golangci_lint = lint_golangci_lint_aspect(
 )
 
 golangci_lint_test = lint_test(aspect = golangci_lint)
+
+# Isolate fact-producing printf from other linters. The bools analyzer also
+# checks that dependency diagnostics are not reported as root diagnostics.
+golangci_lint_facts = lint_golangci_lint_aspect(
+    binary = Label("@rules_lint//lint:golangci_lint_bin"),
+    config = Label("@//test/analyzerfacts:.golangci.yml"),
+)
+
+golangci_lint_facts_test = lint_test(aspect = golangci_lint_facts)

@@ -125,11 +125,6 @@ func run(in io.Reader, out io.Writer, _ []string) error {
 	// fully-resolved absolute path, so the subsequent ResolvePaths leaves it
 	// untouched (no placeholder to replace).
 	roots := strings.Fields(os.Getenv("GOPACKAGESDRIVER_ROOTS"))
-	rootSet := make(map[string]bool, len(roots))
-	for _, r := range roots {
-		rootSet[r] = true
-	}
-
 	registry := NewPackageRegistry(bazelVersion{})
 	for _, f := range jsonFiles {
 		if err := WalkFlatPackagesFromJSON(f, func(pkg *FlatPackage) {
@@ -138,16 +133,9 @@ func run(in io.Reader, out io.Writer, _ []string) error {
 					pkg.ExportFile = exp
 				}
 			}
-			// Lint only the root package(s) from source; consume every
-			// dependency (stdlib and external) purely via its export data
-			// (.a/.x). This is the correct linter model — deps are compiled
-			// artifacts, not lint targets — and it prevents golangci-lint from
-			// typechecking dependency source, which would surface false errors
-			// for third-party code whose imports lie outside the Bazel graph.
-			if !rootSet[pkg.ID] && pkg.ExportFile != "" {
-				pkg.GoFiles = nil
-				pkg.CompiledGoFiles = nil
-			}
+			// Keep dependency source lists: golangci-lint needs source to compute
+			// cross-package analyzer facts on a cold cache. Compiler exports
+			// provide types, not analyzer facts. Roots below select lint targets.
 			registry.Add(pkg)
 		}); err != nil {
 			return fmt.Errorf("unable to walk json %s: %w", f, err)

@@ -118,6 +118,17 @@ func TestRunResolvesAndInjects(t *testing.T) {
 	if std.ExportFile != wantStdExport {
 		t.Errorf("stdlib ExportFile = %q; want %q (injected, ResolvePaths must leave absolute path untouched)", std.ExportFile, wantStdExport)
 	}
+	// Dependency sources must survive even when ExportFile is available:
+	// golangci-lint computes analyzer facts from them on a cold cache.
+	if len(resp.Roots) != 1 || resp.Roots[0] != rootID {
+		t.Errorf("resp.Roots = %v; want only %q", resp.Roots, rootID)
+	}
+	if len(std.GoFiles) != 1 || std.GoFiles[0] != bitsSrc {
+		t.Errorf("dependency GoFiles = %v; want [%q]", std.GoFiles, bitsSrc)
+	}
+	if len(std.CompiledGoFiles) != 1 || std.CompiledGoFiles[0] != bitsSrc {
+		t.Errorf("dependency CompiledGoFiles = %v; want [%q]", std.CompiledGoFiles, bitsSrc)
+	}
 }
 
 func mustWrite(t *testing.T, path, content string) {
