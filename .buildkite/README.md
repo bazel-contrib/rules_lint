@@ -17,16 +17,20 @@ present, and Bats where enabled in GHA. Commands get pristine fixtures in
 a disposable local clone; source files deliberately contain lint and format
 violations. Checks continue after failures so the job shows all results.
 
-Use a Linux agent queue with Python 3.9+, Git, Bazelisk available as `bazel`,
-Aspect CLI v2026.38.3 (matching GHA), Bats 1.8.2, bats-support 0.3.0,
-and bats-assert 2.1.0. Put the Bats libraries on `BATS_LIB_PATH`.
-The setup agent only needs Python and `buildkite-agent`.
-Jobs inherit the pipeline's default queue.
+Use a Linux agent queue with Git and a working Docker daemon. Each example
+job builds `.buildkite/Dockerfile`, which installs the Aspect launcher,
+Bazelisk, Bats 1.8.2, bats-support 0.3.0, and bats-assert 2.1.0.
+The launcher reads `.aspect/version.axl` for the CLI version, as in GHA.
+The setup agent only needs Python 3.9+ and `buildkite-agent`.
+Jobs inherit the pipeline's default queue. The checkout must be accessible
+to the Docker daemon for the bind mount.
 
 The C++ formatter currently requires Ubuntu 22.04 with `libtinfo5`, exactly
 as GHA does: the pinned clang-format binary's dependency is unavailable on
-newer Ubuntu. Provision that dependency in the agent image; this pipeline
-does not install packages with sudo. Existing Bazel 8 exceptions and Bats
+newer Ubuntu. The test container supplies it without modifying the host.
+Build #24 showed why tools must be provisioned per job: its setup steps
+passed, but all 28 example jobs failed because the agent lacked `aspect`.
+Existing Bazel 8 exceptions and Bats
 exclusions are copied from GHA, whose FIXME records unresolved failures in
 Python, C++, Java, and Shell Bats suites.
 
