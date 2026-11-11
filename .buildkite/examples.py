@@ -88,7 +88,7 @@ def run(root, folder, checks):
         # Bats also invokes these tools. Apply the same policy to every call,
         # including nested calls, without modifying any test fixtures.
         for tool, body in {
-            "aspect": 'task="$1"; shift\nexec {real} "$task" --remote=none "$@"\n',
+            "aspect": 'task="$1"; shift\nexec {real} "$task" --remote=none --buildkite-annotations:enabled=false --artifact-upload:enabled=false --workflows:enabled=false "$@"\n',
             "bazel": 'exec {real} --nosystem_rc --nohome_rc --bazelrc={rc} "$@"\n',
         }.items():
             path = wrappers / tool

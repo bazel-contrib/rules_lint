@@ -34,6 +34,8 @@ to the Docker daemon for the bind mount.
 The build uses `--load` so remote BuildKit drivers (including Namespace's)
 export the image into the local Docker daemon before running it. No image
 registry or publishing step is needed.
+Tests run as a non-root user because rules_python rejects a root-owned
+hermetic interpreter.
 
 The C++ formatter currently requires Ubuntu 22.04 with `libtinfo5`, exactly
 as GHA does: the pinned clang-format binary's dependency is unavailable on
@@ -48,6 +50,9 @@ No Aspect Workflows runner or credentials are needed. CLI invocations use
 `--remote=none`, including those inside Bats. Buildkite disables the repo's
 Aspect artifact/GitHub reporting features and Workflows feature. Bazel
 ignores agent-wide system/home rc files; workspace rc files still apply.
+The CLI wrapper also explicitly disables Workflows, artifact uploads, and
+Buildkite annotations in every workspace: the test container has no
+`buildkite-agent` binary or agent credentials, so reporting stays in job logs.
 
 Preview generated jobs without uploading:
 

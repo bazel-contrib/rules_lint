@@ -84,6 +84,8 @@ sys.exit(1 if '--output_groups=rules_lint_human' in sys.argv else 0)
             for tool, args, _ in calls:
                 if tool == "aspect":
                     self.assertEqual(args[1], "--remote=none")
+                    for feature in ("buildkite-annotations", "artifact-upload", "workflows"):
+                        self.assertIn(f"--{feature}:enabled=false", args)
                 else:
                     self.assertEqual(args[:2], ["--nosystem_rc", "--nohome_rc"])
             self.assertEqual(fixture.read_text(), "original")
