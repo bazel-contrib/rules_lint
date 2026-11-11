@@ -6,7 +6,9 @@ cd "$(git rev-parse --show-toplevel)"
 # with generated jobs, and the default agent image does not provide Aspect.
 image="rules-lint-example-ci:${BUILDKITE_COMMIT:-$(git rev-parse HEAD)}"
 echo '--- Build example test image'
-docker build --file .buildkite/Dockerfile --tag "$image" .buildkite
+# Namespace uses a remote BuildKit driver. Explicitly export the result into
+# the local Docker daemon; otherwise only the builder cache has the image.
+docker build --load --progress=plain --file .buildkite/Dockerfile --tag "$image" .buildkite
 echo '--- Run example checks'
 docker run --rm --init \
   --mount "type=bind,source=$PWD,target=/workspace" \

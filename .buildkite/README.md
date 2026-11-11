@@ -31,6 +31,9 @@ The launcher reads `.aspect/version.axl` for the CLI version, as in GHA.
 The setup agent only needs Python 3.9+ and `buildkite-agent`.
 Jobs inherit the pipeline's default queue. The checkout must be accessible
 to the Docker daemon for the bind mount.
+The build uses `--load` so remote BuildKit drivers (including Namespace's)
+export the image into the local Docker daemon before running it. No image
+registry or publishing step is needed.
 
 The C++ formatter currently requires Ubuntu 22.04 with `libtinfo5`, exactly
 as GHA does: the pinned clang-format binary's dependency is unavailable on
