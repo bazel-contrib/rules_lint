@@ -1,11 +1,18 @@
 # Example CI
 
-Set the Buildkite pipeline's initial steps to:
+Paste the contents of `.buildkite/pipeline.yml` directly into the Buildkite
+pipeline's steps setting:
 
 ```yaml
 steps:
-  - command: buildkite-agent pipeline upload .buildkite/pipeline.yml
+  - label: ":pipeline: Set up example jobs"
+    key: setup
+    command: python3 .buildkite/examples.py | buildkite-agent pipeline upload
 ```
+
+Do not add a separate step to upload `.buildkite/pipeline.yml`: that creates
+an unnecessary second setup job. The single setup job generates and uploads
+the language jobs directly.
 
 The setup step discovers `examples/**/tools/format`,
 `examples/**/tools/lint`, and `examples/**/test/**/*.bats`, matching
