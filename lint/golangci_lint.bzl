@@ -30,7 +30,7 @@ _MNEMONIC = "AspectRulesLintGolangciLint"
 # `toolchains` below.
 _GO_TOOLCHAIN = "@io_bazel_rules_go//go:toolchain"
 
-def golangci_lint_action(ctx, executable, driver, pkg_info, sdk, stdlib, config, stdout, sarif, exit_code = None, options = []):
+def golangci_lint_action(ctx, executable, driver, pkg_info, sdk, stdlib, config, stdout, sarif, exit_code = None, options = [], mnemonic = _MNEMONIC):
     """Run golangci-lint hermetically against a single Go package.
 
     Args:
@@ -45,6 +45,7 @@ def golangci_lint_action(ctx, executable, driver, pkg_info, sdk, stdlib, config,
         sarif: machine-readable (raw, pre-normalization) SARIF report output file
         exit_code: optional file capturing the exit code; if None, fail on violation
         options: extra command-line options
+        mnemonic: action/output identifier; distinct for differently configured instances.
 
     Returns:
         nothing; declares the lint action.
@@ -70,7 +71,7 @@ def golangci_lint_action(ctx, executable, driver, pkg_info, sdk, stdlib, config,
     # registry has no stdlib packages, so it can neither inject their ExportFile
     # nor resolve dependencies' stdlib imports (e.g. encoding/xml, fmt).
     stage_inputs = depset(direct = stdlib_json, transitive = [json_files])
-    json_dir = ctx.actions.declare_directory(OUTFILE_FORMAT.format(label = ctx.label.name, mnemonic = _MNEMONIC, suffix = "pkgjson.d"))
+    json_dir = ctx.actions.declare_directory(OUTFILE_FORMAT.format(label = ctx.label.name, mnemonic = mnemonic, suffix = "pkgjson.d"))
     stage_args = ctx.actions.args()
     stage_args.add(json_dir.path)
     stage_args.add_all(stage_inputs)
@@ -79,7 +80,7 @@ def golangci_lint_action(ctx, executable, driver, pkg_info, sdk, stdlib, config,
         outputs = [json_dir],
         command = 'dir="$1"; shift; mkdir -p "$dir"; for f in "$@"; do dest="$dir/$(basename "$f")"; cp -f "$f" "$dest"; chmod u+w "$dest"; done',
         arguments = [stage_args],
-        mnemonic = _MNEMONIC + "Stage",
+        mnemonic = mnemonic + "Stage",
         progress_message = "Staging Go package metadata for %{label}",
     )
 
@@ -171,7 +172,7 @@ def golangci_lint_action(ctx, executable, driver, pkg_info, sdk, stdlib, config,
         command = command,
         arguments = [run_args, args],
         env = env,
-        mnemonic = _MNEMONIC,
+        mnemonic = mnemonic,
         progress_message = "Linting %{label} with golangci-lint",
         tools = [executable, driver],
     )
@@ -206,7 +207,7 @@ def _normalize_sarif_action(ctx, raw_sarif, normalized_sarif):
         outputs = [normalized_sarif],
         executable = ctx.executable._sarif_parser,
         arguments = [args],
-        mnemonic = _MNEMONIC + "Sarif",
+        mnemonic = ctx.attr._mnemonic + "Sarif",
         progress_message = "Normalizing golangci-lint SARIF URIs for %{label}",
     )
 
@@ -222,7 +223,7 @@ def _golangci_lint_aspect_impl(target, ctx):
     stdlib = ctx.attr._go_stdlib[GoStdLib]
 
     options = ctx.attr._options[LintOptionsInfo]
-    outputs, info = output_files(_MNEMONIC, target, ctx)
+    outputs, info = output_files(ctx.attr._mnemonic, target, ctx)
 
     extra_options = []
     if options.color:
@@ -235,7 +236,7 @@ def _golangci_lint_aspect_impl(target, ctx):
 
     # golangci-lint writes SARIF to a path we control. Capture the raw SARIF in
     # a temp file and normalize it into the machine output.
-    raw_sarif = ctx.actions.declare_file(OUTFILE_FORMAT.format(label = target.label.name, mnemonic = _MNEMONIC, suffix = "raw_sarif"))
+    raw_sarif = ctx.actions.declare_file(OUTFILE_FORMAT.format(label = target.label.name, mnemonic = ctx.attr._mnemonic, suffix = "raw_sarif"))
 
     golangci_lint_action(
         ctx,
@@ -249,6 +250,7 @@ def _golangci_lint_aspect_impl(target, ctx):
         raw_sarif,
         outputs.human.exit_code,
         extra_options,
+        mnemonic = ctx.attr._mnemonic,
     )
 
     _normalize_sarif_action(ctx, raw_sarif, outputs.machine.out)
@@ -259,13 +261,14 @@ def _golangci_lint_aspect_impl(target, ctx):
 
     return [info]
 
-def lint_golangci_lint_aspect(binary, config, rule_kinds = ["go_library", "go_binary", "go_test"]):
+def lint_golangci_lint_aspect(binary, config, rule_kinds = ["go_library", "go_binary", "go_test"], mnemonic = _MNEMONIC):
     """A factory function to create a golangci-lint linter aspect.
 
     Attrs:
         binary: a golangci-lint executable, typically `@rules_lint//lint:golangci_lint_bin`.
         config: the `.golangci.yml` config file.
         rule_kinds: which rule kinds to visit; defaults to go_library, go_binary, go_test.
+        mnemonic: action/output identifier; use a distinct value for each differently configured instance.
 
     Returns:
         an aspect definition.
@@ -275,6 +278,7 @@ def lint_golangci_lint_aspect(binary, config, rule_kinds = ["go_library", "go_bi
         # Reuse rules_go's per-package metadata (pkg.json, .x, stdlib).
         requires = [go_pkg_info_aspect],
         attrs = {
+            "_mnemonic": attr.string(default = mnemonic),
             "_options": attr.label(
                 default = "//lint:options",
                 providers = [LintOptionsInfo],

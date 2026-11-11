@@ -15,6 +15,7 @@ golangci_lint_test = lint_test(aspect = golangci_lint)
 golangci_lint_facts = lint_golangci_lint_aspect(
     binary = Label("@rules_lint//lint:golangci_lint_bin"),
     config = Label("@//test/analyzerfacts:.golangci.yml"),
+    mnemonic = "AspectRulesLintGolangciLintFacts",
 )
 
 golangci_lint_facts_test = lint_test(aspect = golangci_lint_facts)
