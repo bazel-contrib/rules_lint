@@ -1,0 +1,13 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+cd "$(git rev-parse --show-toplevel)"
+# Each job provisions its own tools. The setup job's filesystem is not shared
+# with generated jobs, and the default agent image does not provide Aspect.
+image="rules-lint-example-ci:${BUILDKITE_COMMIT:-$(git rev-parse HEAD)}"
+echo '--- Build example test image'
+docker build --file .buildkite/Dockerfile --tag "$image" .buildkite
+echo '--- Run example checks'
+docker run --rm --init \
+  --mount "type=bind,source=$PWD,target=/workspace" \
+  "$image" python3 .buildkite/examples.py run "$@"

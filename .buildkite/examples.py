@@ -46,7 +46,7 @@ def pipeline(root):
                 "label": f":test_tube: {folder.removeprefix('examples/')}",
                 "key": folder.replace("/", "-"),
                 "command": shlex.join([
-                    "python3", ".buildkite/examples.py", "run", folder, *checks,
+                    "bash", ".buildkite/run-example.sh", folder, *checks,
                 ]),
                 "timeout_in_minutes": 60,
                 "depends_on": "setup",
