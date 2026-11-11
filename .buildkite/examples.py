@@ -40,19 +40,23 @@ def discover(root):
 
 
 def pipeline(root):
+    groups = [
+        {"group": ":books: Examples", "key": "examples", "steps": []},
+        {"group": ":test_tube: Ruleset tests", "key": "ruleset-tests", "steps": []},
+    ]
+    for folder, checks in sorted(discover(root).items()):
+        group = groups[0] if folder.startswith("examples/") else groups[1]
+        group["steps"].append({
+            "label": f":test_tube: {folder.removeprefix('examples/')}",
+            "key": folder.replace("/", "-"),
+            "command": shlex.join([
+                "bash", ".buildkite/run-example.sh", folder, *checks,
+            ]),
+            "timeout_in_minutes": 60,
+            "depends_on": "setup",
+        })
     return {
-        "steps": [
-            {
-                "label": f":test_tube: {folder.removeprefix('examples/')}",
-                "key": folder.replace("/", "-"),
-                "command": shlex.join([
-                    "bash", ".buildkite/run-example.sh", folder, *checks,
-                ]),
-                "timeout_in_minutes": 60,
-                "depends_on": "setup",
-            }
-            for folder, checks in sorted(discover(root).items())
-        ],
+        "steps": [group for group in groups if group["steps"]],
     }
 
 

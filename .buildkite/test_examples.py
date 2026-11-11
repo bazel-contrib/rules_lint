@@ -30,8 +30,15 @@ class PipelineTest(unittest.TestCase):
                 "examples/new-language": ["lint"],
                 "format": ["integration"],
             })
-            steps = examples.pipeline(root)["steps"]
-            self.assertEqual(len(steps), 3)
+            groups = examples.pipeline(root)["steps"]
+            self.assertEqual([group["key"] for group in groups], ["examples", "ruleset-tests"])
+            self.assertEqual(
+                [step["key"] for step in groups[0]["steps"]],
+                ["examples-new-language", "examples-ruby"],
+            )
+            self.assertEqual([step["key"] for step in groups[1]["steps"]], ["format"])
+            steps = [step for group in groups for step in group["steps"]]
+            self.assertEqual(len({step["key"] for step in steps}), 3)
             self.assertTrue(all(step["depends_on"] == "setup" for step in steps))
 
     def test_runner_restores_fixtures_and_continues_after_failure(self):

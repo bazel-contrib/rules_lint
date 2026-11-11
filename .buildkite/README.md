@@ -19,6 +19,16 @@ The setup step discovers `examples/**/tools/format`,
 `.github/workflows/ci.yaml`. It uploads one job per discovered example,
 plus the shared `format` integration suite. No language list to maintain.
 
+Generated jobs appear in two sibling Buildkite groups:
+
+- **Examples** (`examples`): one job per language example.
+- **Ruleset tests** (`ruleset-tests`): the shared `format/test` suite, with
+  room for root Bazel tests when those migrate from GHA.
+
+Both groups depend only on setup, so their jobs can run concurrently.
+Future dependency-version and platform checks belong in a sibling
+**Compatibility** (`compatibility`) group when those jobs are added.
+
 Each job runs both Bazel and Aspect CLI format/lint entry points where
 present, and Bats where enabled in GHA. Commands get pristine fixtures in
 a disposable local clone; source files deliberately contain lint and format
