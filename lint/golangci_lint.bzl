@@ -133,8 +133,10 @@ def golangci_lint_action(ctx, executable, driver, pkg_info, sdk, stdlib, config,
 
     # Fixed /tmp paths share undeclared cache state between local actions.
     # Use a fresh directory per action, including when sandboxing is disabled.
+    # golangci-lint also locks os.TempDir()/golangci-lint.lock, so isolate
+    # TMPDIR to let independent Bazel actions run concurrently.
     cache_prologue = """cache_dir="$(mktemp -d)" || exit 1; trap 'rm -rf "$cache_dir"' EXIT; """
-    cache_prologue += 'export HOME="$cache_dir" GOCACHE="$cache_dir/go" GOLANGCI_LINT_CACHE="$cache_dir/golangci"; '
+    cache_prologue += 'export HOME="$cache_dir" GOCACHE="$cache_dir/go" GOLANGCI_LINT_CACHE="$cache_dir/golangci" TMPDIR="$cache_dir/tmp"; mkdir -p "$TMPDIR"; '
 
     # GOROOT/PATH must be absolute: Go refuses to exec a `go` binary found via a
     # relative path ("cannot run executable found relative to current
