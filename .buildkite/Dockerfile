@@ -30,7 +30,10 @@ RUN git clone --depth 1 --branch v1.8.2 https://github.com/bats-core/bats-core.g
 
 ENV BATS_LIB_PATH=/usr/local/lib/bats
 ENV CI=true BUILDKITE=true
-RUN git config --system --add safe.directory /workspace
+# Commands in the mounted checkout check /workspace; local clone's upload-pack
+# checks /workspace/.git. Both are the agent-owned repository we mount.
+RUN git config --system --add safe.directory /workspace \
+    && git config --system --add safe.directory /workspace/.git
 # rules_python's hermetic interpreter refuses to run as root.
 RUN useradd --create-home --uid 1000 tester
 ENV HOME=/home/tester
