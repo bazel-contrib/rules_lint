@@ -1,11 +1,11 @@
-# Example CI
+# Buildkite CI
 
 Paste the contents of `.buildkite/pipeline.yml` directly into the Buildkite
 pipeline's steps setting:
 
 ```yaml
 steps:
-  - label: ":pipeline: Set up example jobs"
+  - label: ":pipeline: Set up test jobs"
     key: setup
     command: python3 .buildkite/examples.py | buildkite-agent pipeline upload
 ```
@@ -22,8 +22,10 @@ plus the shared `format` integration suite. No language list to maintain.
 Generated jobs appear in two sibling Buildkite groups:
 
 - **Examples** (`examples`): one job per language example.
-- **Ruleset tests** (`ruleset-tests`): the shared `format/test` suite, with
-  room for root Bazel tests when those migrate from GHA.
+- **Ruleset tests** (`ruleset-tests`): root `bazel test //...` jobs for Bazel
+  7.x, 8.x, and 9.x, plus the shared `format/test` suite. Root jobs use plain
+  Bazel with `--build_tests_only --config=ci --test_output=errors`; they do
+  not invoke Aspect or build unrelated cross-platform release binaries.
 
 Both groups depend only on setup, so their jobs can run concurrently.
 Future dependency-version and platform checks belong in a sibling
@@ -38,7 +40,8 @@ Use a Linux agent queue with Git and a working Docker daemon. Each example
 job builds `.buildkite/Dockerfile`, which installs the Aspect launcher,
 Bazelisk, Bats 1.8.2, bats-support 0.3.0, and bats-assert 2.1.0.
 The launcher reads `.aspect/version.axl` for the CLI version, as in GHA.
-The setup agent only needs Python 3.9+ and `buildkite-agent`.
+The setup agent only needs Python 3.9+ and `buildkite-agent`. The Docker
+runner forwards `USE_BAZEL_VERSION` into the container for root matrix jobs.
 Jobs inherit the pipeline's default queue. The checkout must be accessible
 to the Docker daemon for the bind mount.
 The build uses `--load` so remote BuildKit drivers (including Namespace's)
@@ -76,6 +79,7 @@ Check discovery and runner behavior:
 python3 -m unittest discover -s .buildkite -p 'test_*.py'
 ```
 
-This pipeline covers the example matrices and shared formatter Bats suite.
-Root tests, macOS Java tests, Python compatibility, link checking, BCR patch
-validation, and releases remain in GHA.
+This pipeline covers root tests across Bazel 7/8/9, the example matrices,
+and the shared formatter Bats suite. GHA still runs its existing root tests;
+macOS Java tests, Python compatibility, link checking, BCR patch validation,
+and releases remain there too.

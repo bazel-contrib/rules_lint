@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Discover the GHA example matrices and upload one Buildkite job per example."""
+"""Generate Buildkite example jobs and root Bazel tests."""
 
 import json
 import os
@@ -44,6 +44,15 @@ def pipeline(root):
         {"group": ":books: Examples", "key": "examples", "steps": []},
         {"group": ":test_tube: Ruleset tests", "key": "ruleset-tests", "steps": []},
     ]
+    for major in (7, 8, 9):
+        groups[1]["steps"].append({
+            "label": f":bazel: Root tests (Bazel {major})",
+            "key": f"root-bazel-{major}",
+            "command": "bash .buildkite/run-example.sh . test",
+            "env": {"USE_BAZEL_VERSION": f"{major}.x"},
+            "timeout_in_minutes": 60,
+            "depends_on": "setup",
+        })
     for folder, checks in sorted(discover(root).items()):
         group = groups[0] if folder.startswith("examples/") else groups[1]
         group["steps"].append({
@@ -63,10 +72,12 @@ def pipeline(root):
 def run(root, folder, checks):
     import shutil
 
+    is_root_test = folder == "." and checks == ["test"]
     expected = discover(root)
-    if folder not in expected or checks != expected[folder]:
+    if not is_root_test and (folder not in expected or checks != expected[folder]):
         raise ValueError("Expected a discovered example and its complete check list")
-    for tool in ("git", "bazel", "aspect", "bats"):
+    required_tools = ("git", "bazel") if is_root_test else ("git", "bazel", "aspect", "bats")
+    for tool in required_tools:
         if tool == "bats" and "integration" not in checks:
             continue
         if not shutil.which(tool):
@@ -95,6 +106,8 @@ def run(root, folder, checks):
             "aspect": 'task="$1"; shift\nexec {real} "$task" --remote=none --buildkite-annotations:enabled=false --artifact-upload:enabled=false --workflows:enabled=false "$@"\n',
             "bazel": 'exec {real} --nosystem_rc --nohome_rc --bazelrc={rc} "$@"\n',
         }.items():
+            if tool == "aspect" and is_root_test:
+                continue
             path = wrappers / tool
             # Bats uses FD 3 for TAP output. A newly started Bazel server must
             # not inherit it, or Bats waits for EOF after all tests finish.
@@ -117,11 +130,14 @@ def run(root, folder, checks):
                 ["aspect", "lint", "--fix", "--strategy=soft", "--", "//..."],
             ],
             "integration": [["bats", "./test"]],
+            # Match GHA's test scope without building unrelated release binaries
+            # (bazel test builds non-test targets too unless this flag is set).
+            "test": [["bazel", "test", "--build_tests_only", "--config=ci", "--test_output=errors", "//..."]],
         }
         failed = False
         for check in checks:
             env.pop("USE_BAZEL_VERSION", None)
-            if folder in BAZEL_8[check]:
+            if folder in BAZEL_8.get(check, set()):
                 env["USE_BAZEL_VERSION"] = "8.x"
             elif original_version:
                 env["USE_BAZEL_VERSION"] = original_version
