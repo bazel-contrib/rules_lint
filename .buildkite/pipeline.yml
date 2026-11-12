@@ -1,4 +1,4 @@
 steps:
-  - label: ":pipeline: Set up example jobs"
+  - label: ":pipeline: Set up test jobs"
     key: setup
     command: python3 .buildkite/examples.py | buildkite-agent pipeline upload
