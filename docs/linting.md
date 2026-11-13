@@ -14,9 +14,9 @@ custom Bazel configuration, commonly in `tools/lint`.
 This `linters.bzl` should contain linter aspect declarations.
 
 See the `/tools/lint/linters.bzl` file under each `/examples/[lang]` folder for a complete install example.
-See the `docs/` folder for API docs of the "aspect factory functions" that declare your linters.
+See the [linter API sources](../lint) for docstrings of the "aspect factory functions" that declare your linters.
 Some linter tools are built-in to rules_lint and may be installed by [multitool].
-The aspect factory function docs in the `docs/` folder describe when these are available and how to use them.
+Those docstrings describe when these are available and how to use them.
 
 Finally, register those linter aspects in the lint runner. See details below.
 
@@ -93,7 +93,7 @@ You may wish to use the `--keep_going` flag to continue linting even after the f
 
 ### 5. Failures during `bazel test`
 
-Call the [lint_test](https://registry.bazel.build/modules/aspect_rules_lint/latest/docs/lint/lint_test.bzl)
+Call the [lint_test](../lint/lint_test.bzl)
 factory function in your `linters.bzl` file, then use the resulting rule in your BUILD files or in a wrapper macro.
 
 See the `example/test/BUILD.bazel` file in this repo for some examples.
