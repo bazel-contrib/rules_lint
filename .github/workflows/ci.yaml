@@ -235,6 +235,9 @@ jobs:
       - name: Test
         working-directory: ${{ matrix.workspace.path }}
         run: aspect test --task:name=test-${{ matrix.workspace.slug }}-${{ matrix.bazel.id }} ${{ matrix.bazel.flags }} -- //...
+      - name: Test published Go tools
+        if: matrix.workspace.path == '.'
+        run: tools/release/test_go_prebuilts.sh
   test:
     strategy:
       matrix:
@@ -265,6 +268,11 @@ jobs:
         env:
           USE_BAZEL_VERSION: ${{ matrix.version }}
         run: bazel test //...
+
+      - name: Test published Go tools
+        env:
+          USE_BAZEL_VERSION: ${{ matrix.version }}
+        run: tools/release/test_go_prebuilts.sh
 
   ty-integration:
     runs-on: ubuntu-latest
