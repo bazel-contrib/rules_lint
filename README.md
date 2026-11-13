@@ -258,7 +258,12 @@ We recommend using a Git pre-commit hook to format changed files, and [Aspect Wo
 
 See [Formatting](./docs/formatting.md) for more ways to use the formatter.
 
-Also see [API Documentation](https://registry.bazel.build/modules/aspect_rules_lint/latest/docs/format/defs.bzl)
+Also see the [API reference in the source docstrings](./format/defs.bzl).
+
+<!-- The registry's generated API routes return HTTP 404 because its static site
+does not emit HTML for those routes, even though the documentation data exists.
+Link to source docstrings until the registry serves these routes successfully.
+See https://github.com/bazel-contrib/rules_lint/issues/1085. -->
 
 Demo:
 ![pre-commit format](./docs/format-demo.svg)
@@ -272,7 +277,7 @@ Suggested fixes from the linter tools are presented interactively.
 
 See [Linting](./docs/linting.md) for more ways to use the linter.
 
-Also see [API Documentation](https://registry.bazel.build/modules/aspect_rules_lint/latest/docs)
+Also see the [linter API sources](./lint); each `.bzl` file documents its API in docstrings.
 
 Demo:
 ![bazel lint demo](./docs/lint-fix-demo.svg)
