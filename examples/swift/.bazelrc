@@ -2,3 +2,9 @@
 # `aspect setup bazelrc`; regenerate there, not here. %workspace% is this
 # example, so `../..` reaches the root the examples share.
 try-import %workspace%/../../.aspect/bazelrc
+
+build:lint --aspects=//tools/lint:linters.bzl%swiftlint
+build:lint --aspects=//tools/lint:linters.bzl%swiftlint_nested_config
+build:lint --aspects=//tools/lint:linters.bzl%swiftlint_nested_deeper_nearest_config
+build:lint --aspects=//tools/lint:linters.bzl%swiftlint_nested_without_declared_config
+build:lint --aspects=//tools/lint:linters.bzl%swiftlint_nested_fix_config
