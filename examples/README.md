@@ -33,6 +33,6 @@ Each example includes a minimal working configuration for its supported tools. F
 | `terraform/`        | terraform fmt                                                                 |                                             |
 | `toml/`             | Taplo                                                                         | Taplo                                       |
 | `xml/`              | Prettier with its XML plugin                                                  |                                             |
-| `yaml/`             | yamlfmt                                                                       | yamllint                                    |
+| `yaml/`             | Prettier                                                                      | yamllint                                    |
 
 The `other_formatters/` example covers CUE, Gherkin, GraphQL, HTML Jinja templates, JSON5, and Jsonnet without creating a separate workspace for each format.
