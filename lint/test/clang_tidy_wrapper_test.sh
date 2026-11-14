@@ -274,7 +274,6 @@ done
 
 work_dir="$tmp_dir/exec.root"
 mkdir -p "$work_dir"
-work_dir="$(cd "$work_dir" && pwd)"
 printf '%s\n' \
     "$work_dir/src/foo.cpp:1:5: warning: use a trailing return type [modernize-use-trailing-return-type]" \
     "/usr/include/stdio.h:1:1: note: outside the working directory" \
