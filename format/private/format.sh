@@ -143,6 +143,7 @@ function ls-files {
       'Kotlin') patterns=('*.kt' '*.ktm' '*.kts') ;;
       'Less') patterns=('*.less') ;;
       'Markdown') patterns=('contents.lr' '*.md' '*.livemd' '*.markdown' '*.mdown' '*.mdwn' '*.mkd' '*.mkdn' '*.mkdown' '*.ronn' '*.scd' '*.workbook') ;;
+      'Nix') patterns=('*.nix') ;;
       'Pkl') patterns=('*.pkl' 'PklProject') ;;
       'Protocol Buffer') patterns=('*.proto') ;;
       'Python') patterns=('.gclient' 'DEPS' 'SConscript' 'SConstruct' 'wscript' '*.py' '*.cgi' '*.fcgi' '*.gyp' '*.gypi' '*.lmi' '*.py3' '*.pyde' '*.pyi' '*.pyp' '*.pyt' '*.pyw' '*.rpy' '*.spec' '*.tac' '*.wsgi' '*.xpy') ;;
@@ -154,7 +155,7 @@ function ls-files {
       'SCSS') patterns=('*.scss') ;;
       'Scala') patterns=('*.scala' '*.kojo' '*.sbt' '*.sc') ;;
       'Shell') patterns=('.bash_aliases' '.bash_functions' '.bash_history' '.bash_logout' '.bash_profile' '.bashrc' '.cshrc' '.flaskenv' '.kshrc' '.login' '.profile' '.zlogin' '.zlogout' '.zprofile' '.zshenv' '.zshrc' '9fs' 'PKGBUILD' 'bash_aliases' 'bash_logout' 'bash_profile' 'bashrc' 'cshrc' 'gradlew' 'kshrc' 'login' 'man' 'profile' 'zlogin' 'zlogout' 'zprofile' 'zshenv' 'zshrc' '*.sh' '*.bash' '*.bats' '*.cgi' '*.command' '*.fcgi' '*.ksh' '*.sh.in' '*.tmux' '*.tool' '*.trigger' '*.zsh' '*.zsh-theme') ;;
-      'Starlark') patterns=('BUCK' 'BUILD' 'BUILD.bazel' 'MODULE.bazel' '*.MODULE.bazel' 'Tiltfile' 'WORKSPACE' 'WORKSPACE.bazel' '*.axl' '*.bzl' '*.star') ;;
+      'Starlark') patterns=('BUCK' 'BUILD' 'BUILD.bazel' 'MODULE.bazel' '*.MODULE.bazel' 'Tiltfile' 'WORKSPACE' 'WORKSPACE.bazel' '*.axl' '*.bzl' '*.sky' '*.star') ;;
       'Swift') patterns=('*.swift') ;;
       'TSX') patterns=('*.tsx') ;;
       'TypeScript') patterns=('*.ts' '*.cts' '*.mts') ;;
@@ -197,7 +198,10 @@ function ls-files {
         })
 
         if [ -n "$shebang_re" ]; then
-            for candidate in $(git ls-files -t --cached --modified --other --exclude-standard | grep -v ^S | cut -f2- -d' ' | grep -v '\.' | {
+            # Skip files whose name has an extension. Only the last path
+            # component counts, so scripts under a directory such as .github/
+            # are still checked, as find's ! -name '*.*' does below.
+            for candidate in $(git ls-files -t --cached --modified --other --exclude-standard | grep -v ^S | cut -f2- -d' ' | grep -v '\.[^/]*$' | {
                 grep -vFxf \
                 <(git ls-files --deleted) \
                 || true;
