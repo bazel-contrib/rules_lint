@@ -12,7 +12,7 @@ sh_test(
     data = ["//format/private:format"],
 )
 
-UNIQUE_TOOLS = sets.to_list(sets.make(TOOLS.values()))
+UNIQUE_TOOLS = sets.to_list(sets.make(TOOLS.values() + ["sqlfluff"]))
 
 # Avoid depending on a bunch of actual tools in the root module.
 # That's the job of the example/ submodule.
@@ -93,6 +93,12 @@ format_multirun(
     ruby_fix_args = ["write", "--print-width=80"],
 )
 
+format_multirun(
+    name = "format_with_sqlfluff",
+    sql = ":mock_sqlfluff.sh",
+    sql_formatter = "sqlfluff",
+)
+
 sh_test(
     name = "custom_args_test",
     srcs = ["custom_args_test.sh"],
@@ -104,6 +110,8 @@ sh_test(
         ":format_with_custom_args_Kotlin_with_ktfmt.check",
         ":format_with_custom_args_Ruby_with_stree",
         ":format_with_custom_args_Ruby_with_stree.check",
+        ":format_with_sqlfluff_SQL_with_sqlfluff",
+        ":format_with_sqlfluff_SQL_with_sqlfluff.check",
     ],
     deps = ["@bazel_tools//tools/bash/runfiles"],
 )

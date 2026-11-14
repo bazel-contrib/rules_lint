@@ -103,6 +103,14 @@ setup() {
     assert_output --partial "+ prettier --write --log-level=warn examples/sql/src/hello.sql"
 }
 
+@test "should run sqlfluff on SQL when selected" {
+    run bazel run //format/test:format_with_sqlfluff_SQL_with_sqlfluff
+    assert_success
+
+    assert_output --partial "+ sqlfluff format --quiet "
+    assert_output --partial "examples/sql/src/hello.sql"
+}
+
 @test "should run ruff on Python" {
     run bazel run //format/test:format_Python_with_ruff
     assert_success

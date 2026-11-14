@@ -18,3 +18,10 @@ format_multirun(
     sql = ":prettier",
     visibility = ["//:__subpackages__"],
 )
+
+format_multirun(
+    name = "format_sqlfluff",
+    sql = "//tools/lint:sqlfluff",
+    sql_formatter = "sqlfluff",
+    visibility = ["//:__subpackages__"],
+)
