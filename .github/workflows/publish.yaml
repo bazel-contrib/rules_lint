@@ -22,7 +22,7 @@ on:
       module_roots:
         description: |
           Newline-separated module roots to publish, e.g. "." for the root
-          aspect_rules_lint module or "lint/rust" for aspect_rules_lint_rust.
+          rules_lint module or "lint/rust" for rules_lint_rust.
           Required because this repo hosts several separately versioned
           modules: each release tag belongs to exactly one of them, so the
           publish must name which module the tag's version applies to.
@@ -36,14 +36,18 @@ jobs:
     # version tag, not a commit SHA: slsa-verifier reads the builder ref from the
     # provenance and rejects a bare SHA ("unexpected ref type"), which breaks the
     # source.json attestation that BCR's presubmit verifies. Do not SHA-pin this.
-    uses: bazel-contrib/publish-to-bcr/.github/workflows/publish.yaml@v1.4.1
+    uses: bazel-contrib/publish-to-bcr/.github/workflows/publish.yaml@v1.7.0
     with:
       draft: false
       tag_name: ${{ inputs.tag_name }}
       tag_prefix: ${{ inputs.tag_prefix }}
       module_roots: ${{ inputs.module_roots }}
       # GitHub repository which is a fork of the upstream where the Pull Request will be opened.
-      registry_fork: aspect-forks/bazel-central-registry
+      registry_fork: bazel-contrib/bazel-central-registry
+      author_name: bazel-contrib-bot
+      author_email: 210917734+bazel-contrib-bot@users.noreply.github.com
+      committer_name: bazel-contrib-bot
+      committer_email: 210917734+bazel-contrib-bot@users.noreply.github.com
     permissions:
       attestations: write
       contents: write

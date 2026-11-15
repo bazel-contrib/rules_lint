@@ -31,12 +31,14 @@ TOOLS = {
     "Cuda": "clang-format",
     "YAML": "yamlfmt",
     "Rust": "rustfmt",
+    "Ruby": "stree",
     "XML": "prettier",
     "Gherkin": "prettier",
     "F#": "fantomas",
     "C#": "csharpier",
     "Pkl": "pkl",
     "Go Module": "modfmt",
+    "Nix": "nixfmt",
 }
 
 # Provided to make install more convenient
@@ -71,10 +73,12 @@ CHECK_FLAGS = {
     "clang-format": "--style=file --fallback-style=none --dry-run -Werror",
     "yamlfmt": "-lint",
     "rustfmt": "--check",
+    "stree": "check",
     "fantomas": "--check",
     "csharpier": "check",
     "pkl": "format --silent",
     "modfmt": "-c",
+    "nixfmt": "--check",
 }
 
 # Flags to pass each tool when running in default mode
@@ -105,10 +109,12 @@ FIX_FLAGS = {
     "clang-format": "-style=file --fallback-style=none -i",
     "yamlfmt": "",
     "rustfmt": "",
+    "stree": "write",
     "fantomas": "",
     "csharpier": "format",
     "pkl": "format --write",
     "modfmt": "-w",
+    "nixfmt": "",
 }
 
 def to_attribute_name(lang):

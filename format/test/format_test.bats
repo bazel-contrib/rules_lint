@@ -20,7 +20,7 @@ setup() {
     assert_output --partial "+ prettier --write --log-level=warn examples/nodejs/src/(special_char)/[square]/hello.ts examples/nodejs/src/file-dep.ts examples/nodejs/src/file.ts"
     assert_output --partial "+ prettier --write --log-level=warn examples/nodejs/src/hello.tsx"
     assert_output --partial "+ prettier --write --log-level=warn examples/nodejs/src/hello.vue"
-    assert_output --partial "+ prettier --write --log-level=warn .aspect/config.json .bcr/lint/rust/metadata.template.json .bcr/lint/rust/source.template.json .bcr/lint/scala/metadata.template.json .bcr/lint/scala/source.template.json .bcr/metadata.template.json .bcr/source.template.json"
+    assert_output --partial "+ prettier --write --log-level=warn .bcr/lint/rust/metadata.template.json .bcr/lint/rust/source.template.json .bcr/lint/scala/metadata.template.json .bcr/lint/scala/source.template.json .bcr/metadata.template.json .bcr/source.template.json"
     assert_output --partial "+ prettier --write --log-level=warn examples/nodejs/.swcrc"
     assert_output --partial "+ prettier --write --log-level=warn examples/other_formatters/src/config.json5"
 }
@@ -53,7 +53,10 @@ setup() {
     run bazel run //format/test:format_Markdown_with_prettier
     assert_success
 
-    assert_output --partial "+ prettier --write --log-level=warn .bcr/README.md CONTRIBUTING.md README.md"
+    assert_output --partial "+ prettier --write --log-level=warn "
+    assert_output --partial " .bcr/README.md"
+    assert_output --partial " CONTRIBUTING.md"
+    assert_output --partial " README.md"
 }
 
 @test "should run prettier on XML" {
@@ -104,7 +107,8 @@ setup() {
     run bazel run //format/test:format_Python_with_ruff
     assert_success
 
-    assert_output --partial "+ ruff format --force-exclude examples/python/app/__main__.py examples/python/app/app_test.py"
+    assert_output --partial "+ ruff format --force-exclude "
+    assert_output --partial "examples/python/app/__main__.py examples/python/app/app_test.py"
 }
 
 @test "should run qmlformat on QML" {
@@ -166,7 +170,7 @@ setup() {
     run bazel run //format/test:format_Go_with_gofmt
     assert_success
 
-    assert_output --partial "+ gofmt -w examples/go/src/hello.go"
+    assert_output --partial "+ gofmt -w examples/go/src/greeting.go examples/go/src/hello.go"
 }
 
 @test "should run clang-format on C++" {
@@ -187,7 +191,8 @@ setup() {
     run bazel run //format/test:format_Shell_with_shfmt
     assert_success
 
-    assert_output --partial "+ shfmt -w --apply-ignore .github/workflows/release_prep.sh"
+    assert_output --partial "+ shfmt -w --apply-ignore "
+    assert_output --partial ".github/workflows/release_prep.sh"
     assert_output --partial "examples/shell/src/hello.sh"
     assert_output --partial "examples/shell/src/hello_sh"
 }
@@ -213,6 +218,20 @@ setup() {
     assert_success
 
     assert_output --partial "+ yamlfmt .bcr/lint/rust/presubmit.yml .bcr/lint/scala/presubmit.yml .bcr/presubmit.yml"
+}
+
+@test "should run stree on Ruby" {
+    run bazel run //format/test:format_Ruby_with_stree
+    assert_success
+
+    assert_output --partial "+ stree write examples/ruby/src/hello.rb"
+}
+
+@test "should check Ruby formatting with stree" {
+    run bazel run //format/test:format_Ruby_with_stree.check examples/ruby/src/hello.rb
+    assert_success
+
+    assert_output --partial "+ stree check examples/ruby/src/hello.rb"
 }
 
 @test "should run rustfmt on Rust" {
@@ -255,4 +274,18 @@ setup() {
     assert_success
 
     assert_output --partial "+ modfmt -w examples/go-module/go.mod"
+}
+
+@test "should run nixfmt on Nix" {
+    run bazel run //format/test:format_Nix_with_nixfmt
+    assert_success
+
+    assert_output --partial "+ nixfmt examples/nix/src/hello.nix"
+}
+
+@test "should check Nix formatting with nixfmt" {
+    run bazel run //format/test:format_Nix_with_nixfmt.check
+    assert_success
+
+    assert_output --partial "+ nixfmt --check examples/nix/src/hello.nix"
 }
