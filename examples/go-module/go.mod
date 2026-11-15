@@ -3,7 +3,7 @@ module example.com/go-module-formatter-demo
 go 1.23
 
 require (
-    github.com/spf13/cobra v1.8.0
+    github.com/spf13/cobra v1.10.2
 github.com/stretchr/testify v1.9.0
 )
 

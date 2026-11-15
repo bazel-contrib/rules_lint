@@ -2,10 +2,10 @@
 
 bazel_dep(name = "rules_lint")
 bazel_dep(name = "rules_lint_scala")
-bazel_dep(name = "protobuf", version = "35.1")
-bazel_dep(name = "rules_java", version = "9.3.0")
-bazel_dep(name = "rules_jvm_external", version = "7.0")
-bazel_dep(name = "rules_scala", version = "7.2.6")
+bazel_dep(name = "protobuf", version = "36.2")
+bazel_dep(name = "rules_java", version = "9.9.0")
+bazel_dep(name = "rules_jvm_external", version = "7.2")
+bazel_dep(name = "rules_scala", version = "7.4.1")
 
 local_path_override(
     module_name = "rules_lint",
@@ -19,7 +19,7 @@ local_path_override(
 
 maven = use_extension("@rules_jvm_external//:extensions.bzl", "maven")
 maven.install(
-    artifacts = ["org.scalameta:scalafmt-cli_2.13:3.7.14"],
+    artifacts = ["org.scalameta:scalafmt-cli_2.13:3.11.5"],
     known_contributing_modules = [
         "",
         "protobuf",
