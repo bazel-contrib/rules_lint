@@ -272,7 +272,7 @@ done
 # Test 7: absolute paths under the working directory are made relative, so the
 # report does not depend on the sandbox or execroot location.
 
-work_dir="$tmp_dir/exec.root"
+work_dir="$tmp_dir/exec.[root] with spaces"
 mkdir -p "$work_dir"
 printf '%s\n' \
     "$work_dir/src/foo.cpp:1:5: warning: use a trailing return type [modernize-use-trailing-return-type]" \
