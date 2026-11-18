@@ -28,7 +28,7 @@ native_binary(
 Finally, create the linter aspect, typically in `tools/lint/linters.bzl`:
 
 ```starlark
-load("@aspect_rules_lint//lint:clang_tidy.bzl", "lint_clang_tidy_aspect")
+load("@rules_lint//lint:clang_tidy.bzl", "lint_clang_tidy_aspect")
 
 clang_tidy = lint_clang_tidy_aspect(
     binary = Label("//path/to:clang-tidy"),
@@ -37,13 +37,15 @@ clang_tidy = lint_clang_tidy_aspect(
 ```
 """
 
-load("@bazel_skylib//rules:copy_file.bzl", "copy_file")
 load("@bazel_skylib//rules/directory:providers.bzl", "DirectoryInfo")
 load("@bazel_tools//tools/build_defs/cc:action_names.bzl", "ACTION_NAMES")
 load("@bazel_tools//tools/cpp:toolchain_utils.bzl", "find_cpp_toolchain")
 load("@rules_cc//cc:defs.bzl", "CcInfo", "cc_common")
+load("//lint/private:clang_tidy_flags.bzl", "update_flag")
 load("//lint/private:lint_aspect.bzl", "LintOptionsInfo", "OPTIONAL_SARIF_PARSER_TOOLCHAIN", "OUTFILE_FORMAT", "noop_lint_action", "output_files", "parse_to_sarif_action", "patch_and_output_files", "should_visit")
 load("//lint/private:patcher_action.bzl", "patcher_attrs", "run_patcher")
+
+_COREUTILS_TOOLCHAIN = Label("@bazel_lib//lib:coreutils_toolchain_type")
 
 _MNEMONIC = "AspectRulesLintClangTidy"
 _DISABLED_FEATURES = [
@@ -99,57 +101,20 @@ def _toolchain_flags(ctx, user_flags, action_name = ACTION_NAMES.cpp_compile):
     )
     return flags
 
-def _update_flag(flag):
-    # update from MSVC C++ standard to clang C++ standard
-    unsupported_flags = [
-        "-fno-canonical-system-headers",
-        "-fstack-usage",
-        "/nologo",
-        "/COMPILER_MSVC",
-        "/showIncludes",
-        "/experimental:external",
-    ]
-    unsupported_prefixes = [
-        "/wd",
-        "-W",
-        "/W",
-        "/external",
-    ]
-    if (flag in unsupported_flags):
-        return []
-    for prefix in unsupported_prefixes:
-        if flag.startswith(prefix):
-            return []
-
-    flags = [flag]
-
-    # remap MSVC flags to clang-style
-    if (flag.startswith("/std:")):
-        # remap c++ standard to clang
-        flags = ["-std=" + flag.removeprefix("/std:")]
-    elif (flag.startswith("/D")):
-        # remap defines
-        flags = ["-" + flag[1:]]
-    elif (flag.startswith("/FI")):
-        flags = ["-include", flag.removeprefix("/FI")]
-    elif (flag.startswith("/I")):
-        flags = ["-iquote", flag.removeprefix("/I")]
-    elif (flag in ["/MD", "/MDd", "/MT", "/MTd"]):
-        # mimic microsoft's behaviour and add a define
-        flags = ["-D_MT"]
-    elif (flag.startswith("/")):
-        # strip all other microsoft params
-        return []
-    return flags
-
 def _safe_flags(ctx, flags):
     # Some flags might be used by GCC/MSVC, but not understood by Clang.
     # Remap or remove them here, to allow users to run clang-tidy, without having
     # a clang toolchain configured (that would produce a good command line with --compiler clang)
     safe_flags = []
     skipped_flags = []
+
+    # MSVC-style options only come with a toolchain that targets Windows. A
+    # caller of clang_tidy_action whose ctx has no `_windows_constraint`
+    # attribute keeps the MSVC handling on every target.
+    windows = getattr(ctx.attr, "_windows_constraint", None)
+    msvc = windows == None or ctx.target_platform_has_constraint(windows[platform_common.ConstraintValueInfo])
     for flag in flags:
-        updated = _update_flag(flag)
+        updated = update_flag(flag, msvc)
         if (any(updated)):
             safe_flags.extend(updated)
         elif (ctx.attr._verbose):
@@ -232,9 +197,6 @@ def _aggregate_regex(ctx, compilation_context):
         print("target header dirs: " + ",".join(dirs))
     return regex
 
-def _quoted_arg(arg):
-    return "\"" + arg + "\""
-
 def _get_env(ctx, srcs):
     sources_are_cxx = _is_cxx(srcs[0])
     if (sources_are_cxx):
@@ -252,16 +214,18 @@ def _get_env(ctx, srcs):
     return env
 
 def _get_args(ctx, compilation_context, srcs):
+    # These reach clang-tidy verbatim; the wrapper runs it directly, so shell
+    # quoting added here arrives as literal characters.
     args = []
     if (any(ctx.files._global_config)):
         args.append("--config-file=" + ctx.files._global_config[0].path)
     if (ctx.attr._lint_target_headers):
         regex = _aggregate_regex(ctx, compilation_context)
         if (regex):
-            args.append(_quoted_arg("-header-filter=" + regex))
+            args.append("-header-filter=" + regex)
     elif (ctx.attr._header_filter):
         regex = ctx.attr._header_filter
-        args.append(_quoted_arg("-header-filter=" + regex))
+        args.append("-header-filter=" + regex)
     args.extend([src.path for src in srcs])
     return args
 
@@ -305,14 +269,14 @@ def _get_compiler_args(ctx, compilation_context, srcs):
     args.extend(_prefixed(compilation_context.external_includes.to_list(), "-isystem"))
     return args
 
-def clang_tidy_action(ctx, compilation_context, executable, srcs, stdout, exit_code, patch = None):
+def clang_tidy_action(ctx, compilation_context, executable, srcs, stdout, exit_code, patch = None, args = []):
     """Create a Bazel Action that spawns a clang-tidy process.
 
     Adapter for wrapping Bazel around
     https://clang.llvm.org/extra/clang-tidy/
 
     Args:
-        ctx: an action context OR aspect context
+        ctx: an action context OR aspect context with the coreutils and C++ toolchains
         compilation_context: from target
         executable: struct with a clang-tidy field
         srcs: file objects to lint
@@ -320,14 +284,16 @@ def clang_tidy_action(ctx, compilation_context, executable, srcs, stdout, exit_c
         exit_code: output file containing the exit code of clang-tidy.
             If None, then fail the build when clang-tidy exits non-zero.
         patch: output file for patch (optional). If provided, uses run_patcher instead of run_shell.
+        args: additional clang-tidy arguments passed before the compiler arguments
     """
 
     # Common setup for both patch and non-patch actions
     inputs = _gather_inputs(ctx, compilation_context, srcs)
-    clang_tidy_args = _get_args(ctx, compilation_context, srcs)
+    clang_tidy_args = list(args) + _get_args(ctx, compilation_context, srcs)
     compiler_args = _get_compiler_args(ctx, compilation_context, srcs)
     env = _get_env(ctx, srcs)
-    tools = [executable._clang_tidy_wrapper, executable._clang_tidy, find_cpp_toolchain(ctx).all_files]
+    coreutils = ctx.toolchains[_COREUTILS_TOOLCHAIN].coreutils_info.bin
+    tools = [executable._clang_tidy_wrapper, executable._clang_tidy, coreutils, find_cpp_toolchain(ctx).all_files]
 
     if patch != None:
         # Use run_patcher for fix mode
@@ -335,7 +301,7 @@ def clang_tidy_action(ctx, compilation_context, executable, srcs, stdout, exit_c
             ctx,
             executable,
             inputs = inputs,
-            args = [executable._clang_tidy.path, "--fix"] + clang_tidy_args + ["--"] + compiler_args,
+            args = [coreutils.path, executable._clang_tidy.path, "--fix"] + clang_tidy_args + ["--"] + compiler_args,
             files_to_diff = [src.path for src in srcs],
             patch_out = patch,
             tools = tools,
@@ -367,7 +333,7 @@ def clang_tidy_action(ctx, compilation_context, executable, srcs, stdout, exit_c
             outputs = outputs,
             tools = tools,
             command = executable._clang_tidy_wrapper.path + " $@",
-            arguments = [executable._clang_tidy.path] + clang_tidy_args + ["--", compiler_args_obj],
+            arguments = [coreutils.path, executable._clang_tidy.path] + clang_tidy_args + ["--", compiler_args_obj],
             env = env,
             mnemonic = _MNEMONIC,
             progress_message = "Linting %{{label}}:{} with clang-tidy".format(srcs[0].basename),
@@ -399,6 +365,11 @@ def _clang_tidy_aspect_impl(target, ctx):
     else:
         outputs, info = output_files(_MNEMONIC, target, ctx, files_to_lint = files_to_lint)
 
+    # clang-tidy only colors a terminal, and its output is captured to a file here.
+    # The machine report stays plain because it feeds the SARIF parser. User args
+    # come last so they can override this, e.g. with --use-color=false.
+    human_args = (["--use-color"] if ctx.attr._options[LintOptionsInfo].color else []) + ctx.attr._args
+
     for output, file in zip(outputs, files_to_lint):
         clang_tidy_action(
             ctx,
@@ -408,12 +379,21 @@ def _clang_tidy_aspect_impl(target, ctx):
             output.human.out,
             output.human.exit_code,
             patch = getattr(output, "patch", None),
+            args = human_args,
         )
 
         # TODO(alex): if we run with --fix, this will report the issues that were fixed. Does a machine reader want to know about them?
         raw_machine_report = ctx.actions.declare_file(OUTFILE_FORMAT.format(label = target.label.name + "_rules_lint/" + file.short_path, mnemonic = _MNEMONIC, suffix = "raw_machine_report"))
-        copy_file(name = "raw_machine_report_copy", out = raw_machine_report, src = output.human.out)
-        copy_file(name = "machine_exit_copde_copy", out = output.machine.exit_code, src = output.human.exit_code)
+        if human_args == ctx.attr._args and not hasattr(output, "patch"):
+            # Identical invocations produce the same report and exit code. Reuse
+            # the human action through symlinks, including machine-only builds.
+            ctx.actions.symlink(output = raw_machine_report, target_file = output.human.out)
+            if output.machine.exit_code:
+                ctx.actions.symlink(output = output.machine.exit_code, target_file = output.human.exit_code)
+        else:
+            # Color and --fix change the human report; SARIF needs the original,
+            # uncolored diagnostics, so those invocations must stay separate.
+            clang_tidy_action(ctx, compilation_context, ctx.executable, [file], raw_machine_report, output.machine.exit_code, args = ctx.attr._args)
         parse_to_sarif_action(ctx, _MNEMONIC, raw_machine_report, output.machine.out)
     return [info]
 
@@ -429,7 +409,8 @@ def lint_clang_tidy_aspect(
         lint_target_headers = False,
         angle_includes_are_system = True,
         verbose = False,
-        rule_kinds = DEFAULT_RULE_KINDS):
+        rule_kinds = DEFAULT_RULE_KINDS,
+        args = []):
     """A factory function to create a linter aspect.
 
     Args:
@@ -459,6 +440,7 @@ def lint_clang_tidy_aspect(
             them as regular header files.
         verbose: print debug messages including clang-tidy command lines being invoked.
         rule_kinds: which target kinds should be visited automatically
+        args: additional options to pass to clang-tidy
     """
 
     if type(global_config) == "string":
@@ -504,16 +486,21 @@ def lint_clang_tidy_aspect(
                 cfg = "exec",
             ),
             "_clang_tidy_wrapper": attr.label(
-                default = Label("@aspect_rules_lint//lint:clang_tidy_wrapper"),
+                default = Label("@rules_lint//lint:clang_tidy_wrapper"),
                 executable = True,
                 cfg = "exec",
             ),
             "_cc_toolchain": attr.label(default = Label("@bazel_tools//tools/cpp:current_cc_toolchain")),
+            "_windows_constraint": attr.label(default = Label("@platforms//os:windows")),
             "_rule_kinds": attr.string_list(
                 default = rule_kinds,
             ),
+            "_args": attr.string_list(
+                default = args,
+            ),
         },
         toolchains = [
+            _COREUTILS_TOOLCHAIN,
             OPTIONAL_SARIF_PARSER_TOOLCHAIN,
             "@bazel_tools//tools/cpp:toolchain_type",
         ],

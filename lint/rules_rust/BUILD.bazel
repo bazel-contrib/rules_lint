@@ -1,17 +1,19 @@
 load("@aspect_rules_js//js:defs.bzl", "js_binary", "js_library", "js_run_binary", "js_test")
-load("@aspect_rules_lint//lint/private:patcher_run.bzl", "patcher_run")
+load("@rules_lint//lint/private:patcher_run.bzl", "patcher_run")
 load("@bazel_lib//lib:diff_test.bzl", "diff_test")
 load("@rules_shell//shell:sh_binary.bzl", "sh_binary")
 
 js_library(
     name = "diagnostic-formatter",
-    srcs = ["rust.diagnostic-formatter.js"],
+    srcs = ["rust.diagnostic-formatter.cjs"],
 )
 
 js_binary(
     name = "cli",
-    data = [":diagnostic-formatter"],
-    entry_point = "rust.cli.js",
+    data = [
+        ":diagnostic-formatter",
+    ],
+    entry_point = "rust.cli.cjs",
     # Must be public because users will depend on it when they instantiate the aspect.
     visibility = ["//visibility:public"],
 )
@@ -37,7 +39,7 @@ js_test(
         "testdata/sarif/clippy.sarif.expected",
         ":got.sarif",
     ],
-    entry_point = "rust.diagnostic-formatter.test.js",
+    entry_point = "rust.diagnostic-formatter.test.cjs",
     env = {
         "WANT": "$(rootpath testdata/sarif/clippy.sarif.expected)",
         "GOT": "$(rootpath :got.sarif)",

@@ -6,7 +6,10 @@ load("//lint/private:lint_aspect.bzl", "lint_options")
 
 package(default_visibility = ["//visibility:public"])
 
-exports_files(glob(["*.bzl"]) + ["lint_test.sh"])
+exports_files(glob(["*.bzl"]) + [
+    "lint_test.sh",
+    "ps_script_analyzer_wrapper.ps1",
+])
 
 # Aliases for the built-in linters
 alias(
@@ -22,6 +25,11 @@ alias(
 alias(
     name = "ty_bin",
     actual = "@multitool//tools/ty",
+)
+
+alias(
+    name = "golangci_lint_bin",
+    actual = "@multitool//tools/golangci-lint",
 )
 
 # Used as a default for vale_aspect#styles
@@ -153,7 +161,10 @@ bzl_library(
 bzl_library(
     name = "lint_test",
     srcs = ["lint_test.bzl"],  # keep
-    deps = ["@bazel_lib//lib:paths"],
+    deps = [
+        "@bazel_lib//lib:paths",
+        "@bazel_lib//lib:windows_utils",
+    ],
 )
 
 bzl_library(
@@ -180,6 +191,12 @@ bzl_library(
 bzl_library(
     name = "pydoclint",
     srcs = ["pydoclint.bzl"],
+    deps = ["//lint/private:lint_aspect"],
+)
+
+bzl_library(
+    name = "ps_script_analyzer",
+    srcs = ["ps_script_analyzer.bzl"],
     deps = ["//lint/private:lint_aspect"],
 )
 
@@ -245,6 +262,7 @@ bzl_library(
         "//lint/private:lint_aspect",
         "//lint/private:patcher_action",
         "@bazel_skylib//lib:versions",
+        "@rules_python//python:defs_bzl",
     ],
 )
 
@@ -260,6 +278,25 @@ bzl_library(
 bzl_library(
     name = "shellcheck",
     srcs = ["shellcheck.bzl"],
+    deps = ["//lint/private:lint_aspect"],
+)
+
+# Broken:
+# in deps attribute of starlark_doc_extract rule //lint:golangci_lint.doc_extract: missing
+# bzl_library targets for Starlark module(s) @io_bazel_rules_go//go/private:providers.bzl,
+# @io_bazel_rules_go//go/tools/gopackagesdriver:aspect.bzl. rules_go does not expose
+# bzl_library targets for those modules, so (as with ktlint/spotbugs/clang_tidy/cppcheck
+# above/below) we cannot declare this bzl_library. The aspect loads and runs correctly;
+# only starlark_doc_extract is unavailable.
+# bzl_library(
+#     name = "golangci_lint",
+#     srcs = ["golangci_lint.bzl"],
+#     deps = ["//lint/private:lint_aspect"],
+# )
+
+bzl_library(
+    name = "taplo",
+    srcs = ["taplo.bzl"],
     deps = ["//lint/private:lint_aspect"],
 )
 

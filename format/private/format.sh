@@ -64,7 +64,12 @@ function process_args_in_batches() {
     # Uses up to ARG_MAX - 2k, or 128k, whichever is smaller, characters per
     # command. This was derived from following the defaults from xargs
     # https://www.gnu.org/software/findutils/manual/html_node/find_html/Limiting-Command-Size.html
-    max_batch_size=$(getconf ARG_MAX)-2048
+    # MSYS and Cygwin report ARG_MAX as "undefined", so fall back to the 8191
+    # character command line limit of cmd.exe, which formatters shipped as a
+    # `.bat` launcher have to be invoked through.
+    arg_max=$(getconf ARG_MAX)
+    [[ "$arg_max" =~ ^[0-9]+$ ]] || arg_max=8191
+    max_batch_size=$((arg_max - 2048))
     max_batch_size=$((max_batch_size < 128000 ? max_batch_size : 128000))
     
     # Check if there's only one argument and it starts with '@'
@@ -138,17 +143,19 @@ function ls-files {
       'Kotlin') patterns=('*.kt' '*.ktm' '*.kts') ;;
       'Less') patterns=('*.less') ;;
       'Markdown') patterns=('contents.lr' '*.md' '*.livemd' '*.markdown' '*.mdown' '*.mdwn' '*.mkd' '*.mkdn' '*.mkdown' '*.ronn' '*.scd' '*.workbook') ;;
+      'Nix') patterns=('*.nix') ;;
       'Pkl') patterns=('*.pkl' 'PklProject') ;;
       'Protocol Buffer') patterns=('*.proto') ;;
       'Python') patterns=('.gclient' 'DEPS' 'SConscript' 'SConstruct' 'wscript' '*.py' '*.cgi' '*.fcgi' '*.gyp' '*.gypi' '*.lmi' '*.py3' '*.pyde' '*.pyi' '*.pyp' '*.pyt' '*.pyw' '*.rpy' '*.spec' '*.tac' '*.wsgi' '*.xpy') ;;
       # GitHub Linguist also groups .qbs with QML, but qmlformat only supports .qml files.
       'QML') patterns=('*.qml') ;;
+      'Ruby') patterns=('*.rake' '*.rb') ;;
       'Rust') patterns=('*.rs' '*.rs.in') ;;
       'SQL') patterns=('*.sql' '*.cql' '*.ddl' '*.inc' '*.mysql' '*.prc' '*.tab' '*.udf' '*.viw') ;;
       'SCSS') patterns=('*.scss') ;;
       'Scala') patterns=('*.scala' '*.kojo' '*.sbt' '*.sc') ;;
       'Shell') patterns=('.bash_aliases' '.bash_functions' '.bash_history' '.bash_logout' '.bash_profile' '.bashrc' '.cshrc' '.flaskenv' '.kshrc' '.login' '.profile' '.zlogin' '.zlogout' '.zprofile' '.zshenv' '.zshrc' '9fs' 'PKGBUILD' 'bash_aliases' 'bash_logout' 'bash_profile' 'bashrc' 'cshrc' 'gradlew' 'kshrc' 'login' 'man' 'profile' 'zlogin' 'zlogout' 'zprofile' 'zshenv' 'zshrc' '*.sh' '*.bash' '*.bats' '*.cgi' '*.command' '*.fcgi' '*.ksh' '*.sh.in' '*.tmux' '*.tool' '*.trigger' '*.zsh' '*.zsh-theme') ;;
-      'Starlark') patterns=('BUCK' 'BUILD' 'BUILD.bazel' 'MODULE.bazel' '*.MODULE.bazel' 'Tiltfile' 'WORKSPACE' 'WORKSPACE.bazel' '*.axl' '*.bzl' '*.star') ;;
+      'Starlark') patterns=('BUCK' 'BUILD' 'BUILD.bazel' 'MODULE.bazel' '*.MODULE.bazel' 'Tiltfile' 'WORKSPACE' 'WORKSPACE.bazel' '*.axl' '*.bzl' '*.sky' '*.star') ;;
       'Swift') patterns=('*.swift') ;;
       'TSX') patterns=('*.tsx') ;;
       'TypeScript') patterns=('*.ts' '*.cts' '*.mts') ;;
@@ -191,7 +198,10 @@ function ls-files {
         })
 
         if [ -n "$shebang_re" ]; then
-            for candidate in $(git ls-files -t --cached --modified --other --exclude-standard | grep -v ^S | cut -f2- -d' ' | grep -v '\.' | {
+            # Skip files whose name has an extension. Only the last path
+            # component counts, so scripts under a directory such as .github/
+            # are still checked, as find's ! -name '*.*' does below.
+            for candidate in $(git ls-files -t --cached --modified --other --exclude-standard | grep -v ^S | cut -f2- -d' ' | grep -v '\.[^/]*$' | {
                 grep -vFxf \
                 <(git ls-files --deleted) \
                 || true;
@@ -231,10 +241,10 @@ function ls-files {
     fi
 
     if [[ ${disable_git_attribute_checks:-} == true ]]; then
-      # files should be returned newline separated to avoid a "File name too long" error
-      for file in $files; do
-        echo "$file"
-      done
+      # One path per line, as the attribute check below returns them. git
+      # ls-files lists a modified file twice, and the shebang search adds a
+      # blank line when no file matched a pattern, so drop both.
+      [ -z "$files" ] || awk 'length($0) > 0 && !seen[$0]++' <<< "$files"
       return
     fi
 

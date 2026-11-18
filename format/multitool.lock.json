@@ -4,41 +4,41 @@
     "binaries": [
       {
         "kind": "archive",
-        "url": "https://github.com/cue-lang/cue/releases/download/v0.17.0/cue_v0.17.0_linux_arm64.tar.gz",
+        "url": "https://github.com/cue-lang/cue/releases/download/v0.17.1/cue_v0.17.1_linux_arm64.tar.gz",
         "file": "cue",
-        "sha256": "f4218d82d2903700ee44615172642146f49c8ddcc3809a46fce6cbd0e5baefa6",
+        "sha256": "0d729be30d52c952ca38fc9dcb692caa09d8463fa0b64df5781312779183fbcd",
         "os": "linux",
         "cpu": "arm64"
       },
       {
         "kind": "archive",
-        "url": "https://github.com/cue-lang/cue/releases/download/v0.17.0/cue_v0.17.0_linux_amd64.tar.gz",
+        "url": "https://github.com/cue-lang/cue/releases/download/v0.17.1/cue_v0.17.1_linux_amd64.tar.gz",
         "file": "cue",
-        "sha256": "e22219a1cb520ab3d660a486ed2222bb7b8e9cb9502a951ce6b8ac668695713f",
+        "sha256": "a39b0c97695069d95d276d99be0f5dbabb081d801bfdc9ba49b76efaf94e2369",
         "os": "linux",
         "cpu": "x86_64"
       },
       {
         "kind": "archive",
-        "url": "https://github.com/cue-lang/cue/releases/download/v0.17.0/cue_v0.17.0_darwin_arm64.tar.gz",
+        "url": "https://github.com/cue-lang/cue/releases/download/v0.17.1/cue_v0.17.1_darwin_arm64.tar.gz",
         "file": "cue",
-        "sha256": "d49d4f97ec1db68f1b3e527a78be06a28f3f1b1ca7b5e6902a605450162e5314",
+        "sha256": "64921403f012a97f89494c03605db2fbf7d9daa77dc2631819ac4406cb2e8074",
         "os": "macos",
         "cpu": "arm64"
       },
       {
         "kind": "archive",
-        "url": "https://github.com/cue-lang/cue/releases/download/v0.17.0/cue_v0.17.0_darwin_amd64.tar.gz",
+        "url": "https://github.com/cue-lang/cue/releases/download/v0.17.1/cue_v0.17.1_darwin_amd64.tar.gz",
         "file": "cue",
-        "sha256": "f308f5189b5fd233d5af807a7d86d4106ec73c247852eff50245820af49b4b46",
+        "sha256": "80aa026c3f47400c7bfc228b3422fd56b7c6c5ea4d70686f8d8f01ced716d3de",
         "os": "macos",
         "cpu": "x86_64"
       },
       {
         "kind": "archive",
-        "url": "https://github.com/cue-lang/cue/releases/download/v0.17.0/cue_v0.17.0_windows_amd64.zip",
+        "url": "https://github.com/cue-lang/cue/releases/download/v0.17.1/cue_v0.17.1_windows_amd64.zip",
         "file": "cue.exe",
-        "sha256": "5ee7c2a1ad13b8ed7521b164532e48c8bc1618b500ac3c5808cbbd47d4c9ccb8",
+        "sha256": "9f15378dc52b9a1bb6fa1755adc0410c9f17f330a621b784a5b31fdbc91c6d7a",
         "os": "windows",
         "cpu": "x86_64"
       }
@@ -48,36 +48,36 @@
     "binaries": [
       {
         "kind": "file",
-        "url": "https://github.com/mvdan/gofumpt/releases/download/v0.10.0/gofumpt_v0.10.0_linux_arm64",
-        "sha256": "5d239f93b1ed2dfe74d39b25112bb770a04f6581f986d4b4f5d380521e12ca61",
+        "url": "https://github.com/mvdan/gofumpt/releases/download/v0.12.0/gofumpt_v0.12.0_linux_arm64",
+        "sha256": "4322f081241ab0618356aa5921a8c110e4c7acfc17175cc15dc57b2f4a4b652d",
         "os": "linux",
         "cpu": "arm64"
       },
       {
         "kind": "file",
-        "url": "https://github.com/mvdan/gofumpt/releases/download/v0.10.0/gofumpt_v0.10.0_linux_amd64",
-        "sha256": "48ee398ec72afdaca6accb70f5ed741349d5dcccb52c5bb4c4469d698980b186",
+        "url": "https://github.com/mvdan/gofumpt/releases/download/v0.12.0/gofumpt_v0.12.0_linux_amd64",
+        "sha256": "3bc4fcad497439918f5f56d4987de4709a99da0a355e6bec13a7278532b01d38",
         "os": "linux",
         "cpu": "x86_64"
       },
       {
         "kind": "file",
-        "url": "https://github.com/mvdan/gofumpt/releases/download/v0.10.0/gofumpt_v0.10.0_darwin_arm64",
-        "sha256": "ba4b348e729cba915d5c7dc515774e2f2c7cc5c5ad011de20d34be10e5a2f906",
+        "url": "https://github.com/mvdan/gofumpt/releases/download/v0.12.0/gofumpt_v0.12.0_darwin_arm64",
+        "sha256": "1a3e325b956ed12c21031d9e13382bd51a4fabb57de8d40428819b9583c3cfb9",
         "os": "macos",
         "cpu": "arm64"
       },
       {
         "kind": "file",
-        "url": "https://github.com/mvdan/gofumpt/releases/download/v0.10.0/gofumpt_v0.10.0_darwin_amd64",
-        "sha256": "30e5b914a824c3b6bd0480e4f493517012167d380de74643879c50f4aa0c834e",
+        "url": "https://github.com/mvdan/gofumpt/releases/download/v0.12.0/gofumpt_v0.12.0_darwin_amd64",
+        "sha256": "1d3626892a321aca96a891696eaecb8f68e69e90582c2b55672d5ca210fd5fa8",
         "os": "macos",
         "cpu": "x86_64"
       },
       {
         "kind": "file",
-        "url": "https://github.com/mvdan/gofumpt/releases/download/v0.10.0/gofumpt_v0.10.0_windows_amd64.exe",
-        "sha256": "20872b464435512b74678b1155b75bd75220de5737ad8c075b9151c846543697",
+        "url": "https://github.com/mvdan/gofumpt/releases/download/v0.12.0/gofumpt_v0.12.0_windows_amd64.exe",
+        "sha256": "66bd679908b64864fc85417e7ea01148774b477364b9a02ab1c194333a55c997",
         "os": "windows",
         "cpu": "x86_64"
       }
@@ -131,36 +131,36 @@
     "binaries": [
       {
         "kind": "file",
-        "url": "https://github.com/mvdan/sh/releases/download/v3.13.1/shfmt_v3.13.1_linux_arm64",
-        "sha256": "32d92acaa5cd8abb29fc49dac123dc412442d5713967819d8af2c29f1b3857c7",
+        "url": "https://github.com/mvdan/sh/releases/download/v3.14.1/shfmt_v3.14.1_linux_arm64",
+        "sha256": "5f2db09dae91fca848f7adbdd014632e921a383863a2ad7e0450ad3aba0c6489",
         "os": "linux",
         "cpu": "arm64"
       },
       {
         "kind": "file",
-        "url": "https://github.com/mvdan/sh/releases/download/v3.13.1/shfmt_v3.13.1_linux_amd64",
-        "sha256": "fb096c5d1ac6beabbdbaa2874d025badb03ee07929f0c9ff67563ce8c75398b1",
+        "url": "https://github.com/mvdan/sh/releases/download/v3.14.1/shfmt_v3.14.1_linux_amd64",
+        "sha256": "76e77641faa025814b77f153b29796b8e6fa2fca03e0c76a691608b86c7ea7bf",
         "os": "linux",
         "cpu": "x86_64"
       },
       {
         "kind": "file",
-        "url": "https://github.com/mvdan/sh/releases/download/v3.13.1/shfmt_v3.13.1_darwin_arm64",
-        "sha256": "9680526be4a66ea1ffe988ed08af58e1400fe1e4f4aef5bd88b20bb9b3da33f8",
+        "url": "https://github.com/mvdan/sh/releases/download/v3.14.1/shfmt_v3.14.1_darwin_arm64",
+        "sha256": "b7c872db63553ccffc7253aba3ed7d4885a27d83f1ba567b1138c6315a5847e5",
         "os": "macos",
         "cpu": "arm64"
       },
       {
         "kind": "file",
-        "url": "https://github.com/mvdan/sh/releases/download/v3.13.1/shfmt_v3.13.1_darwin_amd64",
-        "sha256": "6feedafc72915794163114f512348e2437d080d0047ef8b8fa2ec63b575f12af",
+        "url": "https://github.com/mvdan/sh/releases/download/v3.14.1/shfmt_v3.14.1_darwin_amd64",
+        "sha256": "d33eee0da0f92835b3562e9767a05cee7e4eaeef47daa03bfd09da17b4b590a6",
         "os": "macos",
         "cpu": "x86_64"
       },
       {
         "kind": "file",
-        "url": "https://github.com/mvdan/sh/releases/download/v3.13.1/shfmt_v3.13.1_windows_amd64.exe",
-        "sha256": "60cd368533d0ad73fa86d93d5bbf95ef40587245ce684ed138c1b31557b5fe97",
+        "url": "https://github.com/mvdan/sh/releases/download/v3.14.1/shfmt_v3.14.1_windows_amd64.exe",
+        "sha256": "13629ce28442ca80b6b5a819f7574ab39e1c28c6e26734ca816c9714e04851df",
         "os": "windows",
         "cpu": "x86_64"
       }

@@ -3,7 +3,7 @@
 
 load("@bazel_tools//tools/cpp:toolchain_utils.bzl", "find_cpp_toolchain")
 load("@rules_cc//cc:defs.bzl", "CcInfo", "cc_common")
-load("//lint/private:lint_aspect.bzl", "LintOptionsInfo", "OPTIONAL_SARIF_PARSER_TOOLCHAIN", "OUTFILE_FORMAT", "noop_lint_action", "output_files", "parse_to_sarif_action")
+load("//lint/private:lint_aspect.bzl", "LintOptionsInfo", "OPTIONAL_SARIF_PARSER_TOOLCHAIN", "OUTFILE_FORMAT", "noop_lint_action", "output_files", "parse_to_sarif_action", "should_visit")
 
 _MNEMONIC = "AspectRulesLintCppCheck"
 
@@ -37,7 +37,7 @@ def _filter_srcs(rule):
 def _prefixed(list, prefix):
     array = []
     for arg in list:
-        array.append("{} {}".format(prefix, arg))
+        array.append("{}{}".format(prefix, arg))
     return array
 
 def _get_compiler_args(compilation_context):
@@ -50,7 +50,7 @@ def _get_compiler_args(compilation_context):
     args.extend(_prefixed(compilation_context.external_includes.to_list(), "-I"))
     return args
 
-def cppcheck_action(ctx, compilation_context, executable, srcs, stdout, exit_code, do_xml = False):
+def cppcheck_action(ctx, compilation_context, executable, srcs, stdout, exit_code, do_xml = False, args = []):
     """Create a Bazel Action that spawns a cppcheck process.
 
     Args:
@@ -62,11 +62,14 @@ def cppcheck_action(ctx, compilation_context, executable, srcs, stdout, exit_cod
         exit_code: output file containing the exit code of cppcheck.
             If None, then fail the build when cppcheck exits non-zero.
         do_xml: If true, xml output is generated
+        args: additional command-line arguments passed to cppcheck
     """
 
     outputs = [stdout]
     env = {}
-    env["CPPCHECK__STDOUT_STDERR_OUTPUT_FILE"] = stdout.path
+
+    if not do_xml:
+        env["CPPCHECK__STDOUT_STDERR_OUTPUT_FILE"] = stdout.path
 
     if exit_code:
         env["CPPCHECK__EXIT_CODE_OUTPUT_FILE"] = exit_code.path
@@ -74,7 +77,7 @@ def cppcheck_action(ctx, compilation_context, executable, srcs, stdout, exit_cod
 
     env["CPPCHECK__VERBOSE"] = "1" if ctx.attr._verbose else ""
 
-    cppcheck_args = []
+    cppcheck_args = list(args)
 
     # cppcheck shall fail with exit code != 0 if issues found
     cppcheck_args.append("--error-exitcode=31")
@@ -83,7 +86,15 @@ def cppcheck_action(ctx, compilation_context, executable, srcs, stdout, exit_cod
     cppcheck_args.extend(_get_compiler_args(compilation_context))
 
     if do_xml:
+        env["CPPCHECK__OUTPUT_FILE"] = stdout.path
         cppcheck_args.append("--xml-version=3")
+    else:
+        # The SARIF parser is keyed to this exact layout, so it is not user-overridable.
+        # {severity} appears twice on purpose: errorformat consumes the leading copy to derive
+        # the SARIF level, the copy in the tag survives into the message text. With
+        # --report-type, cppcheck substitutes the coding-standard classification for {severity}
+        # and the guideline for {id}.
+        cppcheck_args.append("--template={file}:{line}:{column}: {severity}: {message} [{severity} {id}]")
 
     for f in srcs:
         cppcheck_args.append(f.short_path)
@@ -92,7 +103,7 @@ def cppcheck_action(ctx, compilation_context, executable, srcs, stdout, exit_cod
         inputs = _gather_inputs(compilation_context, srcs),
         outputs = outputs,
         tools = [executable._cppcheck_wrapper, executable._cppcheck, find_cpp_toolchain(ctx).all_files],
-        command = executable._cppcheck_wrapper.path + " $@",
+        command = executable._cppcheck_wrapper.path + ' "$@"',
         arguments = [executable._cppcheck.path] + cppcheck_args,
         env = env,
         mnemonic = _MNEMONIC,
@@ -101,6 +112,9 @@ def cppcheck_action(ctx, compilation_context, executable, srcs, stdout, exit_cod
 
 def _cppcheck_aspect_impl(target, ctx):
     if not CcInfo in target:
+        return []
+
+    if not should_visit(ctx.rule, ctx.attr._rule_kinds):
         return []
 
     files_to_lint = _filter_srcs(ctx.rule)
@@ -117,16 +131,14 @@ def _cppcheck_aspect_impl(target, ctx):
         noop_lint_action(ctx, outputs)
         return [info]
 
-    cppcheck_action(ctx, compilation_context, ctx.executable, files_to_lint, outputs.human.out, outputs.human.exit_code)
+    cppcheck_action(ctx, compilation_context, ctx.executable, files_to_lint, outputs.human.out, outputs.human.exit_code, args = ctx.attr._args)
 
-    # report:
-    raw_machine_report = ctx.actions.declare_file(OUTFILE_FORMAT.format(label = target.label.name, mnemonic = _MNEMONIC, suffix = "raw_machine_report"))
-    cppcheck_action(ctx, compilation_context, ctx.executable, files_to_lint, raw_machine_report, outputs.machine.exit_code)
-    parse_to_sarif_action(ctx, _MNEMONIC, raw_machine_report, outputs.machine.out)
+    parse_to_sarif_action(ctx, _MNEMONIC, outputs.human.out, outputs.machine.out)
 
+    # The XML report is a deliverable of its own; unlike the text output it is lossless, keeping
+    # the cppcheck id alongside the coding-standard guideline and classification.
     xml_output = ctx.actions.declare_file(OUTFILE_FORMAT.format(label = target.label.name, mnemonic = _MNEMONIC, suffix = "xml"))
-    xml_exit_code = ctx.actions.declare_file(OUTFILE_FORMAT.format(label = target.label.name, mnemonic = _MNEMONIC, suffix = "xml_exit_code"))
-    cppcheck_action(ctx, compilation_context, ctx.executable, files_to_lint, xml_output, xml_exit_code, do_xml = True)
+    cppcheck_action(ctx, compilation_context, ctx.executable, files_to_lint, xml_output, outputs.machine.exit_code, do_xml = True, args = ctx.attr._args)
 
     # Create new OutputGroupInfo with xml_output added to machine outputs
     info = OutputGroupInfo(
@@ -137,7 +149,9 @@ def _cppcheck_aspect_impl(target, ctx):
     )
     return [info]
 
-def lint_cppcheck_aspect(binary, verbose = False):
+DEFAULT_RULE_KINDS = ["cc_binary", "cc_library"]
+
+def lint_cppcheck_aspect(binary, verbose = False, rule_kinds = DEFAULT_RULE_KINDS, args = []):
     """A factory function to create a linter aspect.
 
     Args:
@@ -165,6 +179,8 @@ def lint_cppcheck_aspect(binary, verbose = False):
             ```
 
         verbose: print debug messages including cppcheck command lines being invoked.
+        rule_kinds: which target kinds should be visited automatically
+        args: additional options to pass to cppcheck.
     """
 
     return aspect(
@@ -177,17 +193,23 @@ def lint_cppcheck_aspect(binary, verbose = False):
             "_verbose": attr.bool(
                 default = verbose,
             ),
+            "_args": attr.string_list(
+                default = args,
+            ),
             "_cppcheck": attr.label(
                 default = binary,
                 executable = True,
                 cfg = "exec",
             ),
             "_cppcheck_wrapper": attr.label(
-                default = Label("@aspect_rules_lint//lint:cppcheck_wrapper"),
+                default = Label("@rules_lint//lint:cppcheck_wrapper"),
                 executable = True,
                 cfg = "exec",
             ),
             "_cc_toolchain": attr.label(default = Label("@bazel_tools//tools/cpp:current_cc_toolchain")),
+            "_rule_kinds": attr.string_list(
+                default = rule_kinds,
+            ),
         },
         toolchains = [
             OPTIONAL_SARIF_PARSER_TOOLCHAIN,

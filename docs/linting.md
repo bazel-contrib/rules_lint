@@ -85,7 +85,7 @@ Add at least the following to the command-line or to your `.bazelrc` file to cau
 
 ```
 --aspects=//tools/lint:linters.bzl%eslint  # replace with your linter
---@aspect_rules_lint//lint:fail_on_violation
+--@rules_lint//lint:fail_on_violation
 ```
 
 This makes the build fail when any lint violations are present.
@@ -93,7 +93,7 @@ You may wish to use the `--keep_going` flag to continue linting even after the f
 
 ### 5. Failures during `bazel test`
 
-Call the [lint_test](https://registry.bazel.build/docs/aspect_rules_lint#lint-lint_test-bzl)
+Call the [lint_test](https://registry.bazel.build/modules/aspect_rules_lint/latest/docs/lint/lint_test.bzl)
 factory function in your `linters.bzl` file, then use the resulting rule in your BUILD files or in a wrapper macro.
 
 See the `example/test/BUILD.bazel` file in this repo for some examples.
@@ -120,7 +120,7 @@ To bypass this filter, add `tags=["lint-genfiles"]` to a target to force all the
 ## Debugging
 
 Some linters honor the debug flag in this repo. To enable it, add a Bazel flag:
-`--@aspect_rules_lint//lint:debug`
+`--@rules_lint//lint:debug`
 
 [Aspect Workflows]: https://docs.aspect.build/workflows
 [Aspect CLI]: https://docs.aspect.build/cli

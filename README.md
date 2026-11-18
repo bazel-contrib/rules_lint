@@ -1,5 +1,10 @@
 # Run linters and formatters under Bazel
 
+> [!IMPORTANT]
+> These modules were previously published as `aspect_rules_lint`, `aspect_rules_lint_rust` and `aspect_rules_lint_scala`. To upgrade, drop the `aspect_` prefix in your `bazel_dep`, `load()` statements and flags.
+>
+> With the Aspect CLI, also set `ctx.tasks["lint"].args.rules_lint_fix_flag = "@rules_lint//lint:fix"` in `.aspect/config.axl` (requires [v2026.45.6](https://github.com/aspect-build/aspect-cli/releases/tag/v2026.45.6) or later) so `aspect lint --fix` finds the renamed flag.
+
 > [!NOTE]
 > This repository uses the [Aspect CLI](https://github.com/aspect-build/aspect-cli) for CI and local development.
 > See the [docs](https://docs.aspect.build/cli/overview) and [install instructions](https://docs.aspect.build/cli/install) to get started.
@@ -124,47 +129,52 @@ Linters which are not language-specific:
 
 - [keep-sorted]
 
-| Language               | Formatter                 | Linter(s)                                               |
-| ---------------------- | ------------------------- | ------------------------------------------------------- |
-| C / C++                | [clang-format]            | [clang-tidy] or [cppcheck]                              |
-| CUE                    | [cue fmt]                 |                                                         |
-| Cuda                   | [clang-format]            |                                                         |
-| CSS, Less, Sass        | [Prettier]                | [Stylelint]                                             |
-| F#                     | [Fantomas]                |                                                         |
-| Go                     | [gofmt] or [gofumpt]      |                                                         |
-| Go Module              | [modfmt]                  |                                                         |
-| Gherkin                | [prettier-plugin-gherkin] |                                                         |
-| GraphQL                | [Prettier]                |                                                         |
-| HCL (Hashicorp Config) | [terraform] fmt           |                                                         |
-| HTML                   | [Prettier]                |                                                         |
-| JSON                   | [Prettier]                |                                                         |
-| Java                   | [google-java-format]      | [pmd] , [Checkstyle], [Spotbugs]                        |
-| JavaScript             | [Prettier]                | [ESLint]                                                |
-| HTML templates         | [djlint]                  |                                                         |
-| Jsonnet                | [jsonnetfmt]              |                                                         |
-| Kotlin                 | [ktfmt]                   | [ktlint]                                                |
-| Markdown               | [Prettier]                | [Vale]                                                  |
-| Pkl                    | [pkl]                     |                                                         |
-| Protocol Buffer        | [buf]                     | [buf lint]                                              |
-| Python                 | [ruff]                    | [bandit], [flake8], [pydoclint], [pylint], [ruff], [ty] |
-| QML                    | [qmlformat]               | [qmllint]                                            |
-| Ruby                   |                           | [RuboCop], [Standard]                                   |
-| Rust                   | [rustfmt]                 | [clippy]                                                |
-| SQL                    | [prettier-plugin-sql]     |                                                         |
-| Scala                  | [scalafmt]                | [scalafix]                                              |
-| Shell                  | [shfmt]                   | [shellcheck]                                            |
-| Starlark               | [Buildifier]              | [Buildifier]                                            |
-| Swift                  | [SwiftFormat] (1)         |                                                         |
-| TOML                   | [taplo]                   |                                                         |
-| TSX                    | [Prettier]                | [ESLint]                                                |
-| TypeScript             | [Prettier]                | [ESLint]                                                |
-| YAML                   | [yamlfmt]                 | [yamllint]                                              |
-| XML                    | [prettier/plugin-xml]     |                                                         |
+| Language           | Formatter                 | Linter(s)                                               |
+| ------------------ | ------------------------- | ------------------------------------------------------- |
+| C / C++            | [clang-format]            | [clang-tidy] or [cppcheck]                              |
+| C#                 | [CSharpier]               |                                                         |
+| CUE                | [cue fmt]                 |                                                         |
+| CUDA               | [clang-format]            |                                                         |
+| CSS, Less, SCSS    | [Prettier]                | [Stylelint]                                             |
+| F#                 | [Fantomas]                |                                                         |
+| Go                 | [gofmt] or [gofumpt]      | [golangci-lint]                                         |
+| Go Module          | [modfmt]                  |                                                         |
+| Gherkin            | [prettier-plugin-gherkin] |                                                         |
+| GraphQL            | [Prettier]                |                                                         |
+| HTML               | [Prettier]                |                                                         |
+| HTML templates     | [djlint]                  |                                                         |
+| JSON, JSON5, JSONC | [Prettier]                |                                                         |
+| Java               | [google-java-format]      | [pmd], [Checkstyle], [SpotBugs]                         |
+| JavaScript         | [Prettier]                | [ESLint]                                                |
+| Jsonnet            | [jsonnetfmt]              |                                                         |
+| Kotlin             | [ktfmt]                   | [ktlint]                                                |
+| Markdown           | [Prettier]                | [Vale]                                                  |
+| Nix                | [nixfmt]                  |                                                         |
+| Pkl                | [pkl]                     |                                                         |
+| PowerShell         |                           | [PSScriptAnalyzer]                                      |
+| Protocol Buffer    | [buf]                     | [buf lint]                                              |
+| Python             | [ruff]                    | [bandit], [flake8], [pydoclint], [pylint], [ruff], [ty] |
+| QML                | [qmlformat]               | [qmllint]                                               |
+| Ruby               | [Syntax Tree][stree]       | [RuboCop], [StandardRB][standard]                       |
+| Rust               | [rustfmt]                 | [clippy]                                                |
+| SQL                | [prettier-plugin-sql]     |                                                         |
+| Scala              | [scalafmt]                | [scalafix]                                              |
+| Shell              | [shfmt]                   | [shellcheck]                                            |
+| Starlark           | [Buildifier]              | [Buildifier]                                            |
+| Swift              | [SwiftFormat] (1)         |                                                         |
+| Terraform          | [terraform] fmt           |                                                         |
+| TOML               | [taplo]                   | [taplo]                                                 |
+| TSX                | [Prettier]                | [ESLint]                                                |
+| TypeScript         | [Prettier]                | [ESLint]                                                |
+| Vue                | [Prettier]                |                                                         |
+| YAML               | [yamlfmt]                 | [yamllint]                                              |
+| XML                | [prettier/plugin-xml]     |                                                         |
 
 [prettier]: https://prettier.io
+[csharpier]: https://csharpier.com/
 [google-java-format]: https://github.com/google/google-java-format
 [bandit]: https://bandit.readthedocs.io/en/latest/
-[Fantomas]: https://fsprojects.github.io/fantomas/
+[fantomas]: https://fsprojects.github.io/fantomas/
 [flake8]: https://flake8.pycqa.org/en/latest/index.html
 [pydoclint]: https://jsh9.github.io/pydoclint/
 [pmd]: https://docs.pmd-code.org/latest/index.html
@@ -186,7 +196,9 @@ Linters which are not language-specific:
 [prettier/plugin-xml]: https://github.com/prettier/plugin-xml
 [gofmt]: https://pkg.go.dev/cmd/gofmt
 [gofumpt]: https://github.com/mvdan/gofumpt
+[golangci-lint]: https://golangci-lint.run/
 [modfmt]: https://github.com/joshdk/modfmt
+[nixfmt]: https://github.com/NixOS/nixfmt
 [jsonnetfmt]: https://github.com/google/go-jsonnet
 [scalafmt]: https://scalameta.org/scalafmt
 [rubocop]: https://docs.rubocop.org/
@@ -206,7 +218,9 @@ Linters which are not language-specific:
 [vale]: https://vale.sh/
 [yamlfmt]: https://github.com/google/yamlfmt
 [yamllint]: https://yamllint.readthedocs.io/en/stable/
+[psscriptanalyzer]: https://github.com/PowerShell/PSScriptAnalyzer
 [rustfmt]: https://rust-lang.github.io/rustfmt
+[stree]: https://github.com/ruby-syntax-tree/syntax_tree
 [stylelint]: https://stylelint.io
 [clippy]: https://github.com/rust-lang/rust-clippy
 [scalafix]: https://scalacenter.github.io/scalafix/
@@ -245,7 +259,7 @@ We recommend using a Git pre-commit hook to format changed files, and [Aspect Wo
 
 See [Formatting](./docs/formatting.md) for more ways to use the formatter.
 
-Also see [API Documentation](https://registry.bazel.build/docs/aspect_rules_lint#format-defs-bzl)
+Also see [API Documentation](https://registry.bazel.build/modules/aspect_rules_lint/latest/docs/format/defs.bzl)
 
 Demo:
 ![pre-commit format](./docs/format-demo.svg)
@@ -259,7 +273,7 @@ Suggested fixes from the linter tools are presented interactively.
 
 See [Linting](./docs/linting.md) for more ways to use the linter.
 
-Also see [API Documentation](https://registry.bazel.build/docs/aspect_rules_lint)
+Also see [API Documentation](https://registry.bazel.build/modules/aspect_rules_lint/latest/docs)
 
 Demo:
 ![bazel lint demo](./docs/lint-fix-demo.svg)
@@ -289,7 +303,3 @@ Instructions to do this are out-of-scope for this repo, particularly since they 
 
 [aspect workflows]: https://docs.aspect.build/workflows
 [aspect cli]: https://docs.aspect.build/cli
-
-# Telemetry & privacy policy
-
-This ruleset collects limited usage data via [`tools_telemetry`](https://github.com/aspect-build/tools_telemetry), which is reported to Aspect Build Inc and governed by our [privacy policy](https://www.aspect.build/privacy-policy).

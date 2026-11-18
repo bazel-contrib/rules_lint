@@ -10,7 +10,7 @@ The file name must be suffixed by either `.clippy.toml` or `clippy.toml`, otherw
 Finally, create the linter aspect, typically in `tools/lint/linters.bzl`:
 
 ```starlark
-load("@aspect_rules_lint_rust//:clippy.bzl", "lint_clippy_aspect")
+load("@rules_lint_rust//:clippy.bzl", "lint_clippy_aspect")
 
 clippy = lint_clippy_aspect(
     config = Label("//:.clippy.toml"),
@@ -20,8 +20,10 @@ clippy = lint_clippy_aspect(
 ```
 
 Now your targets will be linted with clippy.
+Only targets built with the `rules_rust` that `rules_rs` provides are linted. The aspect skips any other Rust target,
+and a `lint_test` on one fails rather than passing with nothing checked.
 If you wish a target to be excluded from linting, you can give them the `noclippy` tag.
-If you wish a clippy lint exception to fail the build, please enable the `--@aspect_rules_lint//lint:fail_on_violation` flag.
+If you wish a clippy lint exception to fail the build, please enable the `--@rules_lint//lint:fail_on_violation` flag.
 
 Please note that the aspect will propagate to all transitive Rust dependencies of your
 `rust_library`, `rust_binary`, and `rust_test` targets.
@@ -29,9 +31,10 @@ Please note that the aspect will propagate to all transitive Rust dependencies o
 Please watch issue https://github.com/aspect-build/rules_lint/issues/385 for updates on this behavior.
 """
 
-load("@aspect_rules_lint//lint/private:lint_aspect.bzl", "LintOptionsInfo", "OUTFILE_FORMAT", "filter_srcs", "noop_lint_action", "output_files", "patch_and_output_files", "should_visit")
-load("@aspect_rules_lint//lint/private:patcher_action.bzl", "patcher_attrs", "run_patcher")
+load("@rules_lint//lint/private:lint_aspect.bzl", "LintOptionsInfo", "OUTFILE_FORMAT", "filter_srcs", "noop_lint_action", "output_files", "patch_and_output_files", "should_visit")
+load("@rules_lint//lint/private:patcher_action.bzl", "patcher_attrs", "run_patcher")
 load("@rules_rust//rust:defs.bzl", "rust_clippy_action")
+load("@rules_rust//rust:rust_common.bzl", "CrateInfo", "TestCrateInfo")
 
 _MNEMONIC = "AspectRulesLintClippy"
 
@@ -153,7 +156,7 @@ def _clippy_aspect_impl(target, ctx):
         # They do this to force Bazel to re-run targets on failures.
         # However, we don't need to do that because we keep track of output files and exit codes separately.
         "-Wwarnings",
-    ] + ctx.attr._clippy_flags
+    ] + ctx.attr._clippy_flags + ctx.attr._args
 
     fail_on_violation = ctx.attr._options[LintOptionsInfo].fail_on_violation
 
@@ -246,7 +249,7 @@ def _parse_to_sarif_action(ctx, rustc_diagnostics_file, sarif_output):
 
 DEFAULT_RULE_KINDS = ["rust_binary", "rust_library", "rust_shared_library", "rust_test"]
 
-def lint_clippy_aspect(config, rule_kinds = DEFAULT_RULE_KINDS, clippy_flags = []):
+def lint_clippy_aspect(config, rule_kinds = DEFAULT_RULE_KINDS, clippy_flags = [], args = []):
     """A factory function to create a linter aspect.
 
     The Clippy binary will be read from the Rust toolchain.
@@ -255,10 +258,11 @@ def lint_clippy_aspect(config, rule_kinds = DEFAULT_RULE_KINDS, clippy_flags = [
         config (File): Label of the desired Clippy configuration file to use. Reference: https://doc.rust-lang.org/clippy/configuration.html
         rule_kinds (List[str]): List of rule kinds to lint. Defaults to {default_rule_kinds}.
         clippy_flags (List[str]): Extra clippy/rustc lint flags (e.g. `-Dwarnings`, `-Aclippy::style`).
+        args (List[str]): Additional options to pass to Clippy.
     """.format(default_rule_kinds = DEFAULT_RULE_KINDS)
     attrs = {
         "_options": attr.label(
-            default = "@aspect_rules_lint//lint:options",
+            default = "@rules_lint//lint:options",
             providers = [LintOptionsInfo],
         ),
         "_config_file": attr.label(
@@ -270,6 +274,9 @@ def lint_clippy_aspect(config, rule_kinds = DEFAULT_RULE_KINDS, clippy_flags = [
         ),
         "_clippy_flags": attr.string_list(
             default = clippy_flags,
+        ),
+        "_args": attr.string_list(
+            default = args,
         ),
         "_rustc_sarif_parser": attr.label(
             doc = """A binary that can convert JSON rustc diagnostics into SARIF.
@@ -303,6 +310,14 @@ References:
         attr_aspects = ["deps"],
         implementation = _clippy_aspect_impl,
         attrs = patcher_attrs | attrs,
+        # A target not built by rules_rs carries a CrateInfo this module cannot read, so skip
+        # it rather than report it clean. Either provider qualifies: static and shared
+        # libraries advertise only the test one.
+        # https://github.com/hermeticbuild/rules_rust/blob/d11dcf615d6eddeb48d524d464563ca06c3b2a98/rust/private/rust.bzl#L1278-L1281
+        required_providers = [
+            [CrateInfo],
+            [TestCrateInfo],
+        ],
         toolchains =
             [
                 Label("@rules_rust//rust:toolchain_type"),

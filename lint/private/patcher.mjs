@@ -34,7 +34,9 @@ async function sync(src, dst, subdir, filesToDiff) {
       // while with `cp` the `deference` option must be set explicitly.
       await fs.promises.copyFile(srcF, dstF);
       await fs.promises.chmod(dstF, "600");
-    } else if (filesToDiff.find((d) => d.startsWith(f + "/")) !== undefined) {
+    } else if (
+      filesToDiff.find((d) => d.startsWith(f + path.sep)) !== undefined
+    ) {
       debug(`entering ${f}`);
       await sync(src, dst, f, filesToDiff);
     } else {
@@ -47,9 +49,12 @@ async function sync(src, dst, subdir, filesToDiff) {
 
 async function main(args, sandbox) {
   const config = JSON.parse(await fs.promises.readFile(args[0]));
-  const spawnArgs = args.length > 1
-    ? (await fs.promises.readFile(args[1], "utf8")).split(/\r?\n/).filter(Boolean)
-    : config.args;
+  const spawnArgs =
+    args.length > 1
+      ? (await fs.promises.readFile(args[1], "utf8"))
+          .split(/\r?\n/)
+          .filter(Boolean)
+      : config.args;
 
   debug("sandbox", sandbox);
   debug("config", JSON.stringify(config, null, 2));
@@ -75,7 +80,8 @@ async function main(args, sandbox) {
   const ret = childProcess.spawnSync(config.linter, spawnArgs, {
     stdio: "inherit",
     cwd: sandbox,
-    env: config.env || {},
+    // Merge process.env so the linter wrapper (a bash script) can find PATH
+    env: Object.assign({}, process.env, config.env || {}),
   });
 
   // Check if we failed to spawn the process.
@@ -84,7 +90,6 @@ async function main(args, sandbox) {
     console.error(ret.error);
     process.exit(1);
   }
-  
 
   const diffOut = fs.openSync(config.output, "w");
   const diffBin = process.env["DIFF_BIN"]

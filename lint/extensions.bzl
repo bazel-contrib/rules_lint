@@ -1,8 +1,5 @@
 "Module extensions for use with bzlmod"
 
-load("@aspect_tools_telemetry_report//:defs.bzl", "TELEMETRY")  # buildifier: disable=load
-load("@bazel_features//:features.bzl", "bazel_features")
-
 # buildifier: disable=bzl-visibility
 load("@bazel_lib//lib/private:extension_utils.bzl", "extension_utils")
 load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive", "http_file", "http_jar")
@@ -20,21 +17,21 @@ def _public_build_file_content(line):
 def _lint_extension_impl(mctx):
     for mod in mctx.modules:
         for r in mod.tags.cppcheck:
-            # Download cppcheck premium tar files for different platforms
-            # Even though cppcheckpremium is downloaded, it behaves like the free version, if we do not
-            # provide a cppcheck.cfg file and license key.
-
+            # cppcheck premium behaves like the free version and does not require a license,
+            # if cppcheck.cfg is removed.
             http_archive(
                 name = r.linux,
-                build_file_content = _public_build_file_content("""filegroup(name = "files", srcs = glob(["**"], exclude = ["cppcheck.cfg"]))"""),
+                build_file_content = _public_build_file_content("""filegroup(name = "files", srcs = glob(["**"]))"""),
                 integrity = "sha256-IqQ3Iofw6LoHh4YcdbN0m3tjg6utCiey7nGaOaPMv/I=",
+                patch_cmds = ["rm -f cppcheck.cfg"],
                 strip_prefix = "cppcheckpremium-25.8.3",
                 urls = ["https://files.cppchecksolutions.com/25.8.3/ubuntu-22.04/cppcheckpremium-25.8.3-amd64.tar.gz"],
             )
             http_archive(
                 name = r.macos,
-                build_file_content = _public_build_file_content("""filegroup(name = "files", srcs = glob(["**"], exclude = ["cppcheck.cfg"]))"""),
+                build_file_content = _public_build_file_content("""filegroup(name = "files", srcs = glob(["**"]))"""),
                 integrity = "sha256-PEtm/DxKNZNJJuZE+56AZ80R22sZjZoziekAmR7FhNk=",
+                patch_cmds = ["rm -f cppcheck.cfg"],
                 strip_prefix = "cppcheckpremium",
                 urls = ["https://files.cppchecksolutions.com/25.8.3/cppcheckpremium-25.8.3-macos-15.tar.gz"],
             )
@@ -104,6 +101,8 @@ def _lint_extension_impl(mctx):
                     url = style["url"].format(style["version"]),
                 )
 
+    return mctx.extension_metadata(reproducible = True)
+
 tools = module_extension(
     implementation = _lint_extension_impl,
     tag_classes = {
@@ -126,9 +125,7 @@ def _toolchains_extension_impl(mctx):
         get_version_fn = lambda attr: None,
     )
 
-    if bazel_features.external_deps.extension_metadata_has_reproducible:
-        return mctx.extension_metadata(reproducible = True)
-    return mctx.extension_metadata()
+    return mctx.extension_metadata(reproducible = True)
 
 toolchains = module_extension(
     implementation = _toolchains_extension_impl,
