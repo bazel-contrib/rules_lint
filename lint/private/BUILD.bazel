@@ -6,6 +6,11 @@ package(default_visibility = ["//lint:__subpackages__"])
 patcher_binary(name = "patcher")
 
 bzl_library(
+    name = "clang_tidy_flags",
+    srcs = ["clang_tidy_flags.bzl"],
+)
+
+bzl_library(
     name = "gcc_includes",
     srcs = ["gcc_includes.bzl"],
 )
