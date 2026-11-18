@@ -6,14 +6,20 @@ set -euo pipefail
 cd "$(dirname "$0")/../.."
 export USE_BAZEL_VERSION="${USE_BAZEL_VERSION:-$(head -n 1 .bazelversion)}"
 case "$(uname -s)" in
-  Darwin) os=darwin ;;
-  Linux) os=linux ;;
-  *) echo "Unsupported test host: $(uname -s)" >&2; exit 1 ;;
+Darwin) os=darwin ;;
+Linux) os=linux ;;
+*)
+  echo "Unsupported test host: $(uname -s)" >&2
+  exit 1
+  ;;
 esac
 case "$(uname -m)" in
-  arm64|aarch64) arch=arm64 ;;
-  x86_64) arch=amd64 ;;
-  *) echo "Unsupported test architecture: $(uname -m)" >&2; exit 1 ;;
+arm64 | aarch64) arch=arm64 ;;
+x86_64) arch=amd64 ;;
+*)
+  echo "Unsupported test architecture: $(uname -m)" >&2
+  exit 1
+  ;;
 esac
 
 bazel "$@" build --lockfile_mode=off \
@@ -50,6 +56,12 @@ integrity = {
 (release / "tools/integrity.bzl").write_text(f"RELEASED_BINARY_INTEGRITY = {integrity!r}\n")
 consumer_module = fixture / "consumer/MODULE.bazel"
 consumer_module.write_text(consumer_module.read_text().replace('path = "../.."', 'path = "../release"'))
+# The copied example no longer sits two levels below the repository root.
+# Keep its Aspect definitions available to configs selected by the caller's rc.
+consumer_rc = fixture / "consumer/.bazelrc"
+consumer_rc.write_text(consumer_rc.read_text().replace(
+    "%workspace%/../../.aspect/bazelrc", "%workspace%/../release/.aspect/bazelrc"
+))
 PY
 
 cd "$fixture/consumer"
@@ -57,7 +69,7 @@ bazel "$@" test --lockfile_mode=off --distdir="$fixture/distdir" //test:all
 
 # Neither Go helper may re-enter the consumer's source build graph.
 bazel "$@" cquery --lockfile_mode=off --distdir="$fixture/distdir" \
-  'deps(//test:all)' > "$fixture/deps.txt"
+  'deps(//test:all)' >"$fixture/deps.txt"
 if grep -E 'rules_lint.*//(lint/private/gopackagesdriver_static|tools/sarif)' "$fixture/deps.txt"; then
   echo "Published Go linting unexpectedly builds helper tools from source" >&2
   exit 1
