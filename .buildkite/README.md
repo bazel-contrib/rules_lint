@@ -4,7 +4,6 @@ Set the pipeline's steps to the contents of [pipeline.yml](pipeline.yml).
 The setup job needs Python 3.9+ and `buildkite-agent`; generated jobs need
 Git and Docker on a Linux agent. Jobs use the pipeline's default queue.
 The checkout must be accessible to the Docker daemon for the bind mount.
-Setup runs the discovery/runner tests before uploading jobs.
 
 The pipeline discovers `examples/**/tools/format`, `examples/**/tools/lint`,
 and `examples/**/test/**/*.bats`. Two groups run concurrently after setup:

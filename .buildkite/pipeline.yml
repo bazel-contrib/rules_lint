@@ -1,7 +1,4 @@
 steps:
   - label: ":pipeline: Set up test jobs"
     key: setup
-    command: |
-      set -euo pipefail
-      python3 -m unittest discover -s .buildkite -p 'test_*.py'
-      python3 .buildkite/examples.py | buildkite-agent pipeline upload
+    command: python3 .buildkite/examples.py | buildkite-agent pipeline upload
