@@ -11,7 +11,7 @@ import tempfile
 import unittest
 from unittest.mock import patch
 
-import examples
+import pipeline
 
 
 # Real subprocesses exercise cloning, fixture resets, and nested tool wrappers.
@@ -78,7 +78,7 @@ class PipelineTest(unittest.TestCase):
             "examples/new-language/tools/lint/BUILD",
         ):
             self.write(self.root / path)
-        self.assertEqual(examples.discover(self.root), {
+        self.assertEqual(pipeline.discover(self.root), {
             "examples/ruby": ["format", "lint", "integration"],
             "examples/new-language": ["lint"],
             "format": ["integration"],
@@ -96,7 +96,7 @@ class PipelineTest(unittest.TestCase):
         self.write(self.tools / "bats",
                    "#!/usr/bin/env bash\nexec bazel build --bats-probe 3>\"$FD3_PROBE\"\n",
                    executable=True)
-        self.assertEqual(examples.run(self.root, "examples/nodejs", ["format", "lint", "integration"]), 1)
+        self.assertEqual(pipeline.run(self.root, "examples/nodejs", ["format", "lint", "integration"]), 1)
         calls = self.calls()
         self.assertEqual(len(calls), 7)  # Includes checks after the seeded failure.
         self.assertTrue(all(version == "8.x" for _, version in calls[:-1]))
@@ -113,7 +113,7 @@ class PipelineTest(unittest.TestCase):
                    None if tool in ("aspect", "bats") else original_which(tool)):
             for version in ("7.x", "8.x", "9.x"):
                 with patch.dict(os.environ, {"USE_BAZEL_VERSION": version}):
-                    self.assertEqual(examples.run(self.root, ".", ["test"]), 0)
+                    self.assertEqual(pipeline.run(self.root, ".", ["test"]), 0)
         self.assertEqual([version for _, version in self.calls()], ["7.x", "8.x", "9.x"])
         for args, _ in self.calls():
             self.assertIn("--build_tests_only", args)

@@ -155,4 +155,4 @@ if __name__ == "__main__":
     elif len(sys.argv) >= 4 and sys.argv[1] == "run":
         sys.exit(run(root, sys.argv[2], sys.argv[3:]))
     else:
-        sys.exit("Usage: examples.py [run FOLDER CHECK ...]")
+        sys.exit("Usage: pipeline.py [run FOLDER CHECK ...]")

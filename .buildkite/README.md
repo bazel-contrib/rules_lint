@@ -27,7 +27,7 @@ because rules_python's hermetic interpreter refuses root execution.
 
 The container uses Ubuntu 22.04 for the pinned clang-format's `libtinfo5`
 dependency. Bazel 8 exceptions and disabled Bats suites remain recorded in
-[examples.py](examples.py); these predate the migration.
+[pipeline.py](pipeline.py); these predate the migration.
 
 Commands run in a disposable clone and restore fixtures before each check:
 examples intentionally contain lint and format violations. Checks continue
@@ -39,6 +39,6 @@ ignore agent-wide Bazel rc files; workspace rc files still apply.
 Preview the pipeline and test discovery/runner behavior locally:
 
 ```sh
-python3 .buildkite/examples.py
+.buildkite/pipeline.py
 python3 -m unittest discover -s .buildkite -p 'test_*.py'
 ```

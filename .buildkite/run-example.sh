@@ -13,4 +13,4 @@ echo '--- Run checks'
 docker run --rm --init \
   --mount "type=bind,source=$PWD,target=/workspace" \
   --env USE_BAZEL_VERSION \
-  "$image" python3 .buildkite/examples.py run "$@"
+  "$image" .buildkite/pipeline.py run "$@"
