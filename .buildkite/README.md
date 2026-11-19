@@ -11,18 +11,20 @@ and `examples/**/test/**/*.bats`. Two groups run concurrently after setup:
 - **Examples**: one job per example, exercising both Bazel and Aspect CLI
   format/lint entry points, plus Bats where enabled.
 - **Ruleset tests**: root Bazel tests on 7.x, 8.x, and 9.x, plus `format/test`.
-  Root tests use `--build_tests_only` to avoid building release binaries for
-  other platforms.
+  Non-test targets are built too; release-only targets are tagged `manual`
+  to avoid building binaries for other platforms.
 
-GitHub Actions retains macOS Java tests, Python dependency compatibility,
-BCR patch validation, link checking, and release automation. Its `test-all`
+GitHub Actions retains macOS Java and C++ checks, Go workspace and published-tool
+compatibility, Python dependency compatibility, BCR patch validation, link
+checking, and release automation. Its `test-all`
 check covers only those remaining CI jobs; require the Buildkite pipeline's
 status separately in branch protection.
 
 Each job builds [Dockerfile](Dockerfile), which pins the Aspect launcher,
 Bazelisk, and Bats tools. The launcher reads the shared `.aspect/version.axl`
 version pin. `docker build --load` supports remote BuildKit drivers by
-exporting the image to the local Docker daemon. Tests run as a non-root user
+exporting the image to the local Docker daemon. Each job removes its image
+tag on exit, including after failures. Tests run as a non-root user
 because rules_python's hermetic interpreter refuses root execution.
 
 The container uses Ubuntu 22.04 for the pinned clang-format's `libtinfo5`

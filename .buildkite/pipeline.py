@@ -125,9 +125,8 @@ def run(root, folder, checks):
                 ["aspect", "lint", "--fix", "--strategy=soft", "--", "//..."],
             ],
             "integration": [["bats", "./test"]],
-            # Test the ruleset without building unrelated release binaries
-            # (bazel test builds non-test targets too unless this flag is set).
-            "test": [["bazel", "test", "--build_tests_only", "--config=ci", "--test_output=errors", "//..."]],
+            # Build non-test targets too; release-only targets are tagged manual.
+            "test": [["bazel", "test", "--config=ci", "--test_output=errors", "//..."]],
         }
         failed = False
         for check in checks:

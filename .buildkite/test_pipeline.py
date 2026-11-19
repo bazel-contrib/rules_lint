@@ -116,7 +116,7 @@ class PipelineTest(unittest.TestCase):
                     self.assertEqual(pipeline.run(self.root, ".", ["test"]), 0)
         self.assertEqual([version for _, version in self.calls()], ["7.x", "8.x", "9.x"])
         for args, _ in self.calls():
-            self.assertIn("--build_tests_only", args)
+            self.assertNotIn("--build_tests_only", args)
         self.assertEqual((self.root / "fixture").read_text(), "original")
 
 

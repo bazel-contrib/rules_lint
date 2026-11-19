@@ -27,8 +27,7 @@ jobs:
           # Allow 503 Service Unavailable when rate limited
           args: --accept '200..=204,503' --base ${{ github.workspace }} --verbose --no-progress './**/*.md' './**/*.html'
           fail: false # sigh
-  # Added on main after the Buildkite migration: retain the Go test matrix
-  # and published-tool checks until Buildkite covers them too.
+  # Go workspace and published-tool compatibility checks remain on GHA.
   go-test:
     runs-on: ubuntu-latest
     strategy:
@@ -72,7 +71,7 @@ jobs:
           USE_BAZEL_VERSION: ${{ matrix.version }}
         run: bazel test //...
       - name: Test clang-tidy sysroot handling in examples/cpp
-        # The lint jobs pin examples/cpp to Bazel 8 (see their TODO), so only that matrix entry runs it.
+        # Buildkite pins C++ lint checks to Bazel 8; match that version here.
         if: matrix.version == '8.x'
         working-directory: examples/cpp
         env:
