@@ -5,12 +5,15 @@ import json
 import os
 from pathlib import Path
 import shlex
+import shutil
 import subprocess
 import sys
 import tempfile
 
 
+# FIXME: These Bats suites already failed before the migration from GHA.
 BATS_EXCLUDED = {"examples/python", "examples/cpp", "examples/java", "examples/shell"}
+# TODO: Upgrade these checks once their dependencies support Bazel 9.
 BAZEL_8 = {
     "format": {"examples/csharp", "examples/fsharp", "examples/nodejs"},
     "lint": {"examples/cpp", "examples/kotlin", "examples/nodejs"},
@@ -24,8 +27,7 @@ def discover(root):
     def add(folder, check):
         checks.setdefault(folder, []).append(check)
 
-    # Same predicates as ci.yaml's find commands. Union the matrices so a
-    # language gets one job even when it has both format and lint coverage.
+    # Combine all entry points into one job per example.
     for tool in ("format", "lint"):
         for path in sorted((root / "examples").glob(f"**/tools/{tool}")):
             if path.is_dir():
@@ -40,12 +42,10 @@ def discover(root):
 
 
 def pipeline(root):
-    groups = [
-        {"group": ":books: Examples", "key": "examples", "steps": []},
-        {"group": ":test_tube: Ruleset tests", "key": "ruleset-tests", "steps": []},
-    ]
+    examples = {"group": ":books: Examples", "key": "examples", "steps": []}
+    ruleset = {"group": ":test_tube: Ruleset tests", "key": "ruleset-tests", "steps": []}
     for major in (7, 8, 9):
-        groups[1]["steps"].append({
+        ruleset["steps"].append({
             "label": f":bazel: Root tests (Bazel {major})",
             "key": f"root-bazel-{major}",
             "command": "bash .buildkite/run-example.sh . test",
@@ -54,7 +54,7 @@ def pipeline(root):
             "depends_on": "setup",
         })
     for folder, checks in sorted(discover(root).items()):
-        group = groups[0] if folder.startswith("examples/") else groups[1]
+        group = examples if folder.startswith("examples/") else ruleset
         group["steps"].append({
             "label": f":test_tube: {folder.removeprefix('examples/')}",
             "key": folder.replace("/", "-"),
@@ -64,14 +64,10 @@ def pipeline(root):
             "timeout_in_minutes": 60,
             "depends_on": "setup",
         })
-    return {
-        "steps": [group for group in groups if group["steps"]],
-    }
+    return {"steps": [examples, ruleset]}
 
 
 def run(root, folder, checks):
-    import shutil
-
     is_root_test = folder == "." and checks == ["test"]
     expected = discover(root)
     if not is_root_test and (folder not in expected or checks != expected[folder]):
@@ -130,7 +126,7 @@ def run(root, folder, checks):
                 ["aspect", "lint", "--fix", "--strategy=soft", "--", "//..."],
             ],
             "integration": [["bats", "./test"]],
-            # Match GHA's test scope without building unrelated release binaries
+            # Test the ruleset without building unrelated release binaries
             # (bazel test builds non-test targets too unless this flag is set).
             "test": [["bazel", "test", "--build_tests_only", "--config=ci", "--test_output=errors", "//..."]],
         }
@@ -143,8 +139,7 @@ def run(root, folder, checks):
                 env["USE_BAZEL_VERSION"] = original_version
             for command in commands[check]:
                 print(f"--- {folder}: {shlex.join(command)}", flush=True)
-                # GHA uses independent checkouts. Restore fixtures between
-                # commands, but only inside our disposable clone: --fix and
+                # Restore fixtures inside our disposable clone: --fix and
                 # format intentionally mutate source files.
                 subprocess.run(["git", "reset", "--hard", "--quiet", commit], cwd=checkout, check=True)
                 subprocess.run(["git", "clean", "-fd", "--quiet"], cwd=checkout, check=True)

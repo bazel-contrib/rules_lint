@@ -1,85 +1,45 @@
 # Buildkite CI
 
-Paste the contents of `.buildkite/pipeline.yml` directly into the Buildkite
-pipeline's steps setting:
+Set the pipeline's steps to the contents of [pipeline.yml](pipeline.yml).
+The setup job needs Python 3.9+ and `buildkite-agent`; generated jobs need
+Git and Docker on a Linux agent. Jobs use the pipeline's default queue.
+The checkout must be accessible to the Docker daemon for the bind mount.
+Setup runs the discovery/runner tests before uploading jobs.
 
-```yaml
-steps:
-  - label: ":pipeline: Set up test jobs"
-    key: setup
-    command: python3 .buildkite/examples.py | buildkite-agent pipeline upload
-```
+The pipeline discovers `examples/**/tools/format`, `examples/**/tools/lint`,
+and `examples/**/test/**/*.bats`. Two groups run concurrently after setup:
 
-Do not add a separate step to upload `.buildkite/pipeline.yml`: that creates
-an unnecessary second setup job. The single setup job generates and uploads
-the language jobs directly.
+- **Examples**: one job per example, exercising both Bazel and Aspect CLI
+  format/lint entry points, plus Bats where enabled.
+- **Ruleset tests**: root Bazel tests on 7.x, 8.x, and 9.x, plus `format/test`.
+  Root tests use `--build_tests_only` to avoid building release binaries for
+  other platforms.
 
-The setup step discovers `examples/**/tools/format`,
-`examples/**/tools/lint`, and `examples/**/test/**/*.bats`, matching
-`.github/workflows/ci.yaml`. It uploads one job per discovered example,
-plus the shared `format` integration suite. No language list to maintain.
+GitHub Actions retains macOS Java tests, Python dependency compatibility,
+BCR patch validation, link checking, and release automation. Its `test-all`
+check covers only those remaining CI jobs; require the Buildkite pipeline's
+status separately in branch protection.
 
-Generated jobs appear in two sibling Buildkite groups:
+Each job builds [Dockerfile](Dockerfile), which pins the Aspect launcher,
+Bazelisk, and Bats tools. The launcher reads the shared `.aspect/version.axl`
+version pin. `docker build --load` supports remote BuildKit drivers by
+exporting the image to the local Docker daemon. Tests run as a non-root user
+because rules_python's hermetic interpreter refuses root execution.
 
-- **Examples** (`examples`): one job per language example.
-- **Ruleset tests** (`ruleset-tests`): root `bazel test //...` jobs for Bazel
-  7.x, 8.x, and 9.x, plus the shared `format/test` suite. Root jobs use plain
-  Bazel with `--build_tests_only --config=ci --test_output=errors`; they do
-  not invoke Aspect or build unrelated cross-platform release binaries.
+The container uses Ubuntu 22.04 for the pinned clang-format's `libtinfo5`
+dependency. Bazel 8 exceptions and disabled Bats suites remain recorded in
+[examples.py](examples.py); these predate the migration.
 
-Both groups depend only on setup, so their jobs can run concurrently.
-Future dependency-version and platform checks belong in a sibling
-**Compatibility** (`compatibility`) group when those jobs are added.
+Commands run in a disposable clone and restore fixtures before each check:
+examples intentionally contain lint and format violations. Checks continue
+after failures to report all results. Bazel/Aspect wrappers also apply inside
+Bats, closing its TAP descriptor so Bazel servers cannot keep the suite open.
+The wrappers disable Aspect remote services, uploads, and reporting and
+ignore agent-wide Bazel rc files; workspace rc files still apply.
 
-Each job runs both Bazel and Aspect CLI format/lint entry points where
-present, and Bats where enabled in GHA. Commands get pristine fixtures in
-a disposable local clone; source files deliberately contain lint and format
-violations. Checks continue after failures so the job shows all results.
-
-Use a Linux agent queue with Git and a working Docker daemon. Each example
-job builds `.buildkite/Dockerfile`, which installs the Aspect launcher,
-Bazelisk, Bats 1.8.2, bats-support 0.3.0, and bats-assert 2.1.0.
-The launcher reads `.aspect/version.axl` for the CLI version, as in GHA.
-The setup agent only needs Python 3.9+ and `buildkite-agent`. The Docker
-runner forwards `USE_BAZEL_VERSION` into the container for root matrix jobs.
-Jobs inherit the pipeline's default queue. The checkout must be accessible
-to the Docker daemon for the bind mount.
-The build uses `--load` so remote BuildKit drivers (including Namespace's)
-export the image into the local Docker daemon before running it. No image
-registry or publishing step is needed.
-Tests run as a non-root user because rules_python rejects a root-owned
-hermetic interpreter.
-
-The C++ formatter currently requires Ubuntu 22.04 with `libtinfo5`, exactly
-as GHA does: the pinned clang-format binary's dependency is unavailable on
-newer Ubuntu. The test container supplies it without modifying the host.
-Build #24 showed why tools must be provisioned per job: its setup steps
-passed, but all 28 example jobs failed because the agent lacked `aspect`.
-Existing Bazel 8 exceptions and Bats
-exclusions are copied from GHA, whose FIXME records unresolved failures in
-Python, C++, Java, and Shell Bats suites.
-
-No Aspect Workflows runner or credentials are needed. CLI invocations use
-`--remote=none`, including those inside Bats. Buildkite disables the repo's
-Aspect artifact/GitHub reporting features and Workflows feature. Bazel
-ignores agent-wide system/home rc files; workspace rc files still apply.
-The CLI wrapper also explicitly disables Workflows, artifact uploads, and
-Buildkite annotations in every workspace: the test container has no
-`buildkite-agent` binary or agent credentials, so reporting stays in job logs.
-
-Preview generated jobs without uploading:
+Preview the pipeline and test discovery/runner behavior locally:
 
 ```sh
 python3 .buildkite/examples.py
-```
-
-Check discovery and runner behavior:
-
-```sh
 python3 -m unittest discover -s .buildkite -p 'test_*.py'
 ```
-
-This pipeline covers root tests across Bazel 7/8/9, the example matrices,
-and the shared formatter Bats suite. GHA still runs its existing root tests;
-macOS Java tests, Python compatibility, link checking, BCR patch validation,
-and releases remain there too.

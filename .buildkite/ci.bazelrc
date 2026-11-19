@@ -1,4 +1,4 @@
-# Match the setup-bazel settings used by the GHA example jobs.
+# Shared settings for Buildkite jobs, including nested Bazel calls from Bats.
 common --show_progress_rate_limit=60
 common --show_timestamps
 build:lint --no@rules_lint//lint:color
