@@ -2,7 +2,7 @@ module github.com/aspect-build/rules_lint/lint/keep-sorted
 
 go 1.23.5
 
-require github.com/google/keep-sorted v0.11.0
+require github.com/google/keep-sorted v0.8.0
 
 require (
 	github.com/Workiva/go-datastructures v1.0.53 // indirect
