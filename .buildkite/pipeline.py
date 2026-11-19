@@ -100,7 +100,7 @@ def run(root, folder, checks):
         # including nested calls, without modifying any test fixtures.
         for tool, body in {
             "aspect": 'task="$1"; shift\nexec {real} "$task" --remote=none --buildkite-annotations:enabled=false --artifact-upload:enabled=false --workflows:enabled=false "$@"\n',
-            "bazel": 'exec {real} --nosystem_rc --nohome_rc --bazelrc={rc} "$@"\n',
+            "bazel": 'exec {real} "$@"\n',
         }.items():
             if tool == "aspect" and is_root_test:
                 continue
@@ -109,7 +109,6 @@ def run(root, folder, checks):
             # not inherit it, or Bats waits for EOF after all tests finish.
             path.write_text("#!/usr/bin/env bash\nset -euo pipefail\nexec 3>&-\n" + body.format(
                 real=shlex.quote(shutil.which(tool)),
-                rc=shlex.quote(str(root / ".buildkite/ci.bazelrc")),
             ))
             path.chmod(0o755)
         env["PATH"] = str(wrappers) + os.pathsep + env["PATH"]

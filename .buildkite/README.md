@@ -33,8 +33,10 @@ Commands run in a disposable clone and restore fixtures before each check:
 examples intentionally contain lint and format violations. Checks continue
 after failures to report all results. Bazel/Aspect wrappers also apply inside
 Bats, closing its TAP descriptor so Bazel servers cannot keep the suite open.
-The wrappers disable Aspect remote services, uploads, and reporting and
-ignore agent-wide Bazel rc files; workspace rc files still apply.
+The Aspect wrapper disables remote services, uploads, and reporting.
+The image installs [ci.bazelrc](ci.bazelrc) as `/etc/bazel.bazelrc`, so all
+Bazel invocations load the shared CI settings automatically; workspace rc
+files still apply.
 
 Preview the pipeline and test discovery/runner behavior locally:
 

@@ -28,6 +28,9 @@ RUN git clone --depth 1 --branch v1.8.2 https://github.com/bats-core/bats-core.g
     && git clone --depth 1 --branch v0.3.0 https://github.com/bats-core/bats-support.git /usr/local/lib/bats/bats-support \
     && git clone --depth 1 --branch v2.1.0 https://github.com/bats-core/bats-assert.git /usr/local/lib/bats/bats-assert
 
+# Every Bazel invocation, including Aspect and Bats subprocesses, reads this.
+COPY ci.bazelrc /etc/bazel.bazelrc
+
 ENV BATS_LIB_PATH=/usr/local/lib/bats
 ENV CI=true BUILDKITE=true
 # Commands in the mounted checkout check /workspace; local clone's upload-pack
