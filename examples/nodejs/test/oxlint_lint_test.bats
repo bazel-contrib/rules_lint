@@ -18,6 +18,8 @@ bats_load_library "bats-assert"
     run cat bazel-bin/src/oxlint_fixable.AspectRulesLintOxlint.patch
     assert_output --partial -- "-const enum Direction"
     assert_output --partial -- "+enum Direction"
+    assert_output --partial -- "+const stageDone = 1;"
+    refute_output --partial -- "+const stageTwo = 1;"
 }
 
 @test "Oxlint type-aware rules resolve the target tsconfig and dependency types" {

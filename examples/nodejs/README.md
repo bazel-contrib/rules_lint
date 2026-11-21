@@ -11,7 +11,7 @@ This example demonstrates how to set up formatting and linting for Node.js ecosy
 ### Linters
 
 - **ESLint** - JavaScript and TypeScript linter
-- **Oxlint** - standalone Rust JavaScript and TypeScript linter (no JS plugins)
+- **Oxlint** - JavaScript and TypeScript linter
 - **Stylelint** - CSS linter
 - **Vale** - Markdown linter
 
@@ -33,7 +33,7 @@ The `src/` directory contains example files with intentional violations:
 
 - `hello.js` - Simple JavaScript file
 - `file.ts`, `file-dep.ts` - TypeScript files with ESLint violations
-- `oxlint-fixable.ts` - A built-in Oxlint violation with an autofix patch
+- `oxlint-fixable.ts` - Built-in and custom plugin violations requiring multiple fix passes
 - `oxlint_typed/` - Type-aware linting with inherited tsconfig paths and dependency declarations
 - `hello.tsx` - React TypeScript file
 - `hello.vue` - Vue component
@@ -42,12 +42,6 @@ The `src/` directory contains example files with intentional violations:
 - `hello.scss` - SCSS file (SASS CSS preprocessor)
 - `index.html` - HTML file
 - `README.md` - Markdown file with Vale violations
-
-Oxlint comes from checksum-pinned native archives in `tools/lint/oxlint.lock.json`.
-Its JSON configuration uses native rules, so this example does not need the npm
-Oxlint wrapper or the JS-plugin bridge. The separate `oxlint-tsgolint` backend
-provides the optional type-aware rules. JS plugins remain supported by the
-ruleset when configured with the npm Oxlint distribution.
 
 ## Configuration Files
 
