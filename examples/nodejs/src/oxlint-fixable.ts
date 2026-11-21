@@ -4,6 +4,3 @@ const enum Direction {
 }
 
 console.log(Direction.Left);
-
-const stageOne = 1;
-console.log(stageOne);
