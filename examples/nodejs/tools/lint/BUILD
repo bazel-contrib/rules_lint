@@ -4,26 +4,23 @@ This is in its own package because it has so many loading-time symbols,
 we don't want to trigger eager fetches of these for builds that don't want to run lint.
 """
 
-load("@rules_lint//lint:vale_library.bzl", "VALE_STYLES")
 load("@bazel_lib//lib:copy_to_directory.bzl", "copy_to_directory")
 load("@bazel_skylib//rules:native_binary.bzl", "native_binary")
 load("@npm//:eslint/package_json.bzl", eslint_bin = "bin")
-load("@npm//:oxlint/package_json.bzl", oxlint_bin = "bin")
 load("@npm//:oxlint-tsgolint/package_json.bzl", tsgolint_bin = "bin")
 load("@npm//:stylelint/package_json.bzl", stylelint_bin = "bin")
+load("@rules_lint//lint:vale_library.bzl", "VALE_STYLES")
 
 package(default_visibility = ["//:__subpackages__"])
 
 eslint_bin.eslint_binary(name = "eslint")
 
-oxlint_bin.oxlint_binary(name = "oxlint")
-
-# The patcher intentionally links dependencies from its writable shadow tree.
-# Node's filesystem patch rejects these links when loading JS configs/plugins.
-oxlint_bin.oxlint_binary(
-    name = "oxlint_for_fix",
-    patch_node_fs = False,
+alias(
+    name = "oxlint",
+    actual = "@multitool//tools/oxlint",
 )
+
+exports_files(["oxlint.lock.json"])
 
 tsgolint_bin.tsgolint_binary(name = "tsgolint")
 

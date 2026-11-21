@@ -1,6 +1,3 @@
 {
-  "$schema": "./node_modules/oxlint/configuration_schema.json",
-  "extends": ["./oxlint-base.json"],
-  "jsPlugins": ["./oxlint-plugin.mjs"],
-  "rules": { "fixture/two-step-rename": "error" }
+  "extends": ["./oxlint-base.json"]
 }

@@ -6,6 +6,7 @@ bazel_dep(name = "aspect_rules_swc", version = "2.7.6")
 bazel_dep(name = "aspect_rules_ts", version = "3.10.1")
 bazel_dep(name = "bazel_lib", version = "3.8.0")
 bazel_dep(name = "bazel_skylib", version = "1.9.2")
+bazel_dep(name = "rules_multitool", version = "1.11.1")
 
 local_path_override(
     module_name = "rules_lint",
@@ -21,6 +22,10 @@ npm.npm_translate_lock(
     },
 )
 use_repo(npm, "npm")
+
+multitool = use_extension("@rules_multitool//multitool:extension.bzl", "multitool")
+multitool.hub(lockfile = "//tools/lint:oxlint.lock.json")
+use_repo(multitool, "multitool")
 
 rules_ts_ext = use_extension("@aspect_rules_ts//ts:extensions.bzl", "ext")
 rules_ts_ext.deps()

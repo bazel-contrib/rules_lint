@@ -15,8 +15,6 @@ js_library(
     name = "oxlint_config_deps",
     srcs = [
         "oxlint-base.json",
-        "oxlint-plugin.mjs",
-        "package.json",
     ],
 )
 

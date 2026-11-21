@@ -21,7 +21,6 @@ eslint_test = lint_test(aspect = eslint)
 oxlint = lint_oxlint_aspect(
     binary = Label("//tools/lint:oxlint"),
     config = Label("//:oxlint_config"),
-    fix_binary = Label("//tools/lint:oxlint_for_fix"),
 )
 
 oxlint_test = lint_test(aspect = oxlint)
