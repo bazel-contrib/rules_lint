@@ -328,6 +328,20 @@ function run-format {
           time-run "$files" "$bin" "$lang" 0 $args
         fi
         ;;
+      Ruby)
+        # Workspace symlinks can point to files excluded from formatting.
+        # Source files in a sandboxed format_test are themselves runfiles symlinks.
+        if [[ -z ${TEST_WORKSPACE:-} || -n ${WORKSPACE:-} ]]; then
+          files=$(while IFS= read -r file; do
+            if [[ -f "$file" && ! -L "$file" ]]; then
+              printf '%s\n' "$file"
+            fi
+          done <<< "$files")
+        fi
+        if [[ -n "$files" ]]; then
+          time-run "$files" "$bin" "$lang" 0 $args
+        fi
+        ;;
       Java|Scala)
           # Setting JAVA_RUNFILES to work around https://github.com/bazelbuild/bazel/issues/12348
           ( export JAVA_RUNFILES="${RUNFILES_DIR}" ; time-run "$files" "$bin" "$lang" 0 $args )

@@ -31,7 +31,7 @@ TOOLS = {
     "Cuda": "clang-format",
     "YAML": "yamlfmt",
     "Rust": "rustfmt",
-    "Ruby": "stree",
+    "Ruby": "rubyfmt",
     "XML": "prettier",
     "Gherkin": "prettier",
     "F#": "fantomas",
@@ -50,6 +50,7 @@ BUILTIN_TOOL_LABELS = {
     "Terraform": "@multitool//tools/terraform",
     "YAML": "@multitool//tools/yamlfmt",
     "Python": "@multitool//tools/ruff",
+    "Ruby": "@multitool//tools/rubyfmt",
 }
 
 # Flags to pass each tool's CLI when running in check mode
@@ -73,7 +74,7 @@ CHECK_FLAGS = {
     "clang-format": "--style=file --fallback-style=none --dry-run -Werror",
     "yamlfmt": "-lint",
     "rustfmt": "--check",
-    "stree": "check",
+    "rubyfmt": "--check",
     "fantomas": "--check",
     "csharpier": "check",
     "pkl": "format --silent",
@@ -109,7 +110,7 @@ FIX_FLAGS = {
     "clang-format": "-style=file --fallback-style=none -i",
     "yamlfmt": "",
     "rustfmt": "",
-    "stree": "write",
+    "rubyfmt": "--in-place --fail-fast",
     "fantomas": "",
     "csharpier": "format",
     "pkl": "format --write",

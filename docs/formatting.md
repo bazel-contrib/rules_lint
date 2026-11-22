@@ -68,23 +68,25 @@ indent_style = space
 indent_size = 4
 ```
 
-### Ruby (Syntax Tree)
+### Ruby (rubyfmt)
 
-Supply a stree executable target with `ruby = ":stree"`. The default arguments
-are `check` for checking and `write` for fixing. File discovery selects `.rb` and
-`.rake` files.
+Use `ruby = "@rules_lint//format:rubyfmt"` to use the prebuilt formatter on
+Linux (x86-64 and ARM64) or macOS (ARM64). On other platforms, provide your
+own rubyfmt executable target with `ruby = ":rubyfmt"`. The default arguments
+are `--check` for checking and `--in-place --fail-fast` for fixing. File discovery
+selects `.rb` and `.rake` files and skips workspace symlinks.
 
-Users can supply a `.streerc` in their working directory to configure options such
-as print width, trailing commas, and ignored files:
+The Ruby formatter previously used Syntax Tree. Replace the executable label
+and update any `ruby_check_args` or `ruby_fix_args` to use rubyfmt flags.
+rubyfmt has a fixed style, so `.streerc` style settings do not carry over.
+Use `.gitattributes` for file exclusions because rubyfmt can bypass its ignore
+patterns when passed explicit file paths:
 
-```text
---print-width=100
---plugins=plugin/trailing_comma
---ignore-files=*.generated.rb
+```gitattributes
+*.generated.rb rules-lint-ignored
 ```
 
-See the [Ruby example](../examples/ruby) for a pinned gem bundle, executable target,
-and the CLI patch needed to resolve workspace paths and skip symlink inputs.
+See the [Ruby example](../examples/ruby) for the Bazel setup.
 
 ### Custom formatter arguments
 

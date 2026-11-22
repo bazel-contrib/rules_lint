@@ -220,18 +220,18 @@ setup() {
     assert_output --partial "+ yamlfmt .bcr/lint/rust/presubmit.yml .bcr/lint/scala/presubmit.yml .bcr/presubmit.yml"
 }
 
-@test "should run stree on Ruby" {
-    run bazel run //format/test:format_Ruby_with_stree
+@test "should run rubyfmt on Ruby" {
+    run bazel run //format/test:format_Ruby_with_rubyfmt
     assert_success
 
-    assert_output --partial "+ stree write examples/ruby/src/hello.rb"
+    assert_output --partial "+ rubyfmt --in-place --fail-fast examples/ruby/src/hello.rb"
 }
 
-@test "should check Ruby formatting with stree" {
-    run bazel run //format/test:format_Ruby_with_stree.check examples/ruby/src/hello.rb
+@test "should check Ruby formatting with rubyfmt" {
+    run bazel run //format/test:format_Ruby_with_rubyfmt.check examples/ruby/src/hello.rb
     assert_success
 
-    assert_output --partial "+ stree check examples/ruby/src/hello.rb"
+    assert_output --partial "+ rubyfmt --check examples/ruby/src/hello.rb"
 }
 
 @test "should run rustfmt on Rust" {
