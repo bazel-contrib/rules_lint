@@ -48,4 +48,7 @@ check_flags "format_Ruby_with_stree.check.bash" "check" "Ruby check mode uses st
 check_flags "format_with_custom_args_Ruby_with_stree.bash" "write --print-width=80" "Ruby fix mode has custom arguments"
 check_flags "format_with_custom_args_Ruby_with_stree.check.bash" "check --print-width=80" "Ruby check mode has custom arguments"
 
+check_flags "format_with_sqlfluff_SQL_with_sqlfluff.bash" "format --quiet" "SQL fix mode uses sqlfluff defaults"
+check_flags "format_with_sqlfluff_SQL_with_sqlfluff.check.bash" "lint --quiet --rules capitalisation,layout,ambiguous.union,convention.not_equal,convention.coalesce,convention.select_trailing_comma,convention.is_null,jinja.padding,structure.distinct" "SQL check mode uses sqlfluff format rules"
+
 echo "All custom arguments tests passed!"

@@ -104,6 +104,8 @@ def format_multirun(name, jobs = 4, print_command = False, disable_git_attribute
         **kwargs: attributes named for each language; see [languages](#rule-languages).
             Additionally supports custom arguments via {language}_fix_args and {language}_check_args
             to override default formatter flags for fix and check modes respectively.
+            Set {language}_formatter to use another supported formatter's default flags,
+            for example `sql_formatter = "sqlfluff"`.
     """
     commands = []
 
@@ -164,6 +166,8 @@ def format_test(name, srcs = None, workspace = None, no_sandbox = False, disable
         **kwargs: attributes named for each language; see [languages](#rule-languages).
             Additionally supports custom arguments via {language}_fix_args and {language}_check_args
             to override default formatter flags. Test mode uses check_args when specified.
+            Set {language}_formatter to use another supported formatter's default flags,
+            for example `sql_formatter = "sqlfluff"`.
     """
     if srcs and workspace:
         fail("Cannot provide both 'srcs' and 'workspace' at the same time")
@@ -221,7 +225,7 @@ def _format_target_name(name, lang, toolname):
 def _tools_loop(name, kwargs):
     result = []
 
-    for lang, toolname in TOOLS.items():
+    for lang, default_toolname in TOOLS.items():
         lang_attribute = to_attribute_name(lang)
         if lang_attribute not in kwargs.keys():
             continue
@@ -229,9 +233,13 @@ def _tools_loop(name, kwargs):
             kwargs.pop(lang_attribute, None)
             kwargs.pop(lang_attribute + "_fix_args", None)
             kwargs.pop(lang_attribute + "_check_args", None)
+            kwargs.pop(lang_attribute + "_formatter", None)
             continue
 
         tool_label = kwargs.pop(lang_attribute)
+        toolname = kwargs.pop(lang_attribute + "_formatter", None) or default_toolname
+        if toolname not in FIX_FLAGS:
+            fail("Unknown {}_formatter {}. Valid formatters: {}".format(lang_attribute, repr(toolname), sorted(FIX_FLAGS.keys())))
         target_name = _format_target_name(name, lang, toolname)
 
         # Extract custom args for this language
@@ -251,7 +259,7 @@ def _tools_loop(name, kwargs):
         valid_custom_attrs = []
         for lang in TOOLS.keys():
             lang_attribute = to_attribute_name(lang)
-            valid_custom_attrs.extend([lang_attribute + "_fix_args", lang_attribute + "_check_args"])
+            valid_custom_attrs.extend([lang_attribute + "_fix_args", lang_attribute + "_check_args", lang_attribute + "_formatter"])
         fail("""Unknown attributes: {}. Valid language attributes: {}. Valid custom argument attributes: {}""".format(
             list(kwargs.keys()),
             valid_attrs,

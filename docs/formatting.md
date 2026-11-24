@@ -86,6 +86,26 @@ as print width, trailing commas, and ignored files:
 See the [Ruby example](../examples/ruby) for a pinned gem bundle, executable target,
 and the CLI patch needed to resolve workspace paths and skip symlink inputs.
 
+### SQL (SQLFluff)
+
+Prettier is the default SQL formatter. To use SQLFluff instead, supply a sqlfluff
+executable target and set `sql_formatter = "sqlfluff"`:
+
+```starlark
+load("@rules_lint//format:defs.bzl", "format_multirun")
+
+format_multirun(
+    name = "format",
+    sql = ":sqlfluff",
+    sql_formatter = "sqlfluff",
+)
+```
+
+Fix mode runs `sqlfluff format`. Check mode runs `sqlfluff lint` with the rules
+`sqlfluff format` applies. SQLFluff reads its usual `.sqlfluff` configuration files.
+
+See the [SQL example](../examples/sql) for a SQLFluff executable target.
+
 ### Custom formatter arguments
 
 You can override the default command-line arguments passed to formatters by specifying custom arguments for each language and mode:
