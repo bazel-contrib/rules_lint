@@ -161,7 +161,7 @@ Linters which are not language-specific:
 | Scala              | [scalafmt]                | [scalafix]                                              |
 | Shell              | [shfmt]                   | [shellcheck]                                            |
 | Starlark           | [Buildifier]              | [Buildifier]                                            |
-| Swift              | [SwiftFormat] (1)         |                                                         |
+| Swift              | [SwiftFormat] (1)         | [SwiftLint] (1)                                         |
 | Terraform          | [terraform] fmt           |                                                         |
 | TOML               | [taplo]                   | [taplo]                                                 |
 | TSX                | [Prettier]                | [ESLint] or [Oxlint]                                    |
@@ -184,6 +184,7 @@ Linters which are not language-specific:
 [eslint]: https://eslint.org/
 [oxlint]: https://oxc.rs/docs/guide/usage/linter.html
 [swiftformat]: https://github.com/nicklockwood/SwiftFormat
+[swiftlint]: https://github.com/realm/SwiftLint
 [terraform]: https://github.com/hashicorp/terraform
 [buf]: https://docs.buf.build/format/usage
 [keep-sorted]: https://github.com/google/keep-sorted
