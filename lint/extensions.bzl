@@ -169,14 +169,16 @@ _rulesets_repo = repository_rule(
 
 def _rulesets_extension_impl(mctx):
     rules_rust = ""
-
-    # The root module comes first, so its choice takes precedence.
     for mod in mctx.modules:
+        if not mod.tags.rust:
+            continue
+        if not mod.is_root:
+            fail("Only the root module may use the rulesets.rust tag, but {} does. Pass dev_dependency = True to its use_extension call.".format(mod.name))
         if len(mod.tags.rust) > 1:
-            fail("Module {} uses the rulesets.rust tag more than once.".format(mod.name))
-        if mod.tags.rust and not rules_rust:
-            # buildifier: disable=canonical-repository
-            rules_rust = "@@" + mod.tags.rust[0].rules_rust.repo_name
+            fail("The root module uses the rulesets.rust tag more than once.")
+
+        # buildifier: disable=canonical-repository
+        rules_rust = "@@" + mod.tags.rust[0].rules_rust.repo_name
 
     _rulesets_repo(
         name = "rules_lint_rulesets",
@@ -202,6 +204,9 @@ Required by `lint_clippy_aspect`:
 lint_rulesets = use_extension("@rules_lint//lint:extensions.bzl", "rulesets")
 lint_rulesets.rust(rules_rust = "@rules_rust")
 ```
+
+Only the root module may use this tag. Modules that others depend on, such as those in the
+Bazel Central Registry, have to pass `dev_dependency = True` to `use_extension`.
 """,
             attrs = {
                 "rules_rust": attr.label(
