@@ -1,6 +1,6 @@
 # Reusable per-module BCR release, copied from aspect-build/aspect-gazelle.
 # Called by thin per-module trigger workflows (release.yml for the root
-# rules_lint module, release-rust.yml for rules_lint_rust) that
+# rules_lint module, release-scala.yml for rules_lint_scala) that
 # supply the tag prefix, module root, module name, and optionally the release
 # assets to upload. Builds the module's archive via release_prep.sh (which
 # branches on the tag prefix) and drives the publish-to-bcr reusable workflow,
@@ -11,19 +11,19 @@ on:
   workflow_call:
     inputs:
       tag_name:
-        description: 'The tag being released, e.g. "rust-v1.2.3". Unlike aspect-gazelle, this cannot default to github.ref_name because the root release is also invoked via workflow_call from tag.yaml, where the ref is a branch.'
+        description: 'The tag being released, e.g. "scala-v1.2.3". Unlike aspect-gazelle, this cannot default to github.ref_name because the root release is also invoked via workflow_call from tag.yaml, where the ref is a branch.'
         required: true
         type: string
       tag_prefix:
-        description: 'Tag prefix, e.g. "rust-v"; stripped from the tag to get the version.'
+        description: 'Tag prefix, e.g. "scala-v"; stripped from the tag to get the version.'
         required: true
         type: string
       module_root:
-        description: 'Repo-relative module directory, e.g. "lint/rust" or "." for the root module.'
+        description: 'Repo-relative module directory, e.g. "lint/scala" or "." for the root module.'
         required: true
         type: string
       module_name:
-        description: 'Bzlmod module name, e.g. "rules_lint_rust".'
+        description: 'Bzlmod module name, e.g. "rules_lint_scala".'
         required: true
         type: string
       release_files:
@@ -61,7 +61,7 @@ jobs:
           TAG: ${{ inputs.tag_name }}
           PREFIX: ${{ inputs.tag_prefix }}
         run: |
-          # Strip the tag prefix to get semver (e.g. "rust-v1.2.3" -> "1.2.3").
+          # Strip the tag prefix to get semver (e.g. "scala-v1.2.3" -> "1.2.3").
           VERSION="${TAG#"$PREFIX"}"
           if [[ "$VERSION" == *-* ]]; then
             echo "prerelease=true" >> "$GITHUB_OUTPUT"
