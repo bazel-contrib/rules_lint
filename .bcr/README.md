@@ -12,8 +12,6 @@ This repo hosts several separately versioned modules. Each module's templates
 live under this folder at the same relative path as the module in the repo:
 
 - `.bcr/` — the root `rules_lint` module, released from `v*` tags
-- `.bcr/lint/rust/` — the `rules_lint_rust` module (`lint/rust`),
-  released from `rust-v*` tags
 - `.bcr/lint/scala/` — the `rules_lint_scala` module (`lint/scala`),
   released from `scala-v*` tags
 

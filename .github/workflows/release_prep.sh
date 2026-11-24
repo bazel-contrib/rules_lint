@@ -65,16 +65,13 @@ emit_changelog() {
 	fi
 }
 
-# ---- Sub-module releases (rules_lint_rust, ...) --------------------
+# ---- Sub-module releases (rules_lint_scala, ...) -------------------
 # These archives are just the module's subtree hoisted to the archive root,
 # with the module version patched in. Add a module by adding a
 # "<tag-prefix>*) <module root>" case below (plus a trigger workflow and its
 # .bcr/<module root>/ templates).
 SRC_MODULE_ROOT=""
 case "$TAG" in
-rust-v*)
-	SRC_MODULE_ROOT="lint/rust"
-	;;
 scala-v*)
 	SRC_MODULE_ROOT="lint/scala"
 	;;
@@ -85,14 +82,14 @@ v*) ;; # Root module release, handled below.
 	;;
 esac
 if [[ -n "$SRC_MODULE_ROOT" ]]; then
-	# Tag carries the module's prefix (e.g. rust-v1.2.3), so the archive is
-	# rules_lint-rust-v1.2.3.tar.gz, matching strip_prefix "rules_lint-{TAG}"
+	# Tag carries the module's prefix (e.g. scala-v1.2.3), so the archive is
+	# rules_lint-scala-v1.2.3.tar.gz, matching strip_prefix "rules_lint-{TAG}"
 	# in the module's .bcr source.template.json.
 	MODULE_VERSION="${TAG#*-v}"
 	PREFIX="rules_lint-${TAG}"
 	ARCHIVE="rules_lint-${TAG}.tar.gz"
 
-	# Archive the subtree as a tree-ish ("TAG:lint/rust") rather than a
+	# Archive the subtree as a tree-ish ("TAG:lint/scala") rather than a
 	# pathspec: it hoists MODULE.bazel to the archive root, and it sidesteps
 	# the root .gitattributes export-ignore rules that exclude the nested
 	# modules from the root module's archive.

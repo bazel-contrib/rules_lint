@@ -144,3 +144,76 @@ toolchains = module_extension(
         "sarif_parser": tag_class(attrs = {"name": attr.string(default = DEFAULT_SARIF_PARSER_REPOSITORY)}),
     },
 )
+
+def _rulesets_repo_impl(rctx):
+    rctx.file("BUILD.bazel", """\
+load("@bazel_skylib//:bzl_library.bzl", "bzl_library")
+
+bzl_library(
+    name = "rust",
+    srcs = ["rust.bzl"],
+    visibility = ["//visibility:public"],
+)
+""")
+    if rctx.attr.rules_rust:
+        rctx.template("rust.bzl", Label("//lint/private:rust.bzl.tpl"), {"{rules_rust}": rctx.attr.rules_rust})
+    else:
+        rctx.file("rust.bzl", "rules_rust = None\n")
+
+_rulesets_repo = repository_rule(
+    implementation = _rulesets_repo_impl,
+    attrs = {
+        "rules_rust": attr.string(doc = "The rules_rust repository as a canonical repository reference, or empty if not configured."),
+    },
+)
+
+def _rulesets_extension_impl(mctx):
+    rules_rust = ""
+    for mod in mctx.modules:
+        if not mod.tags.rust:
+            continue
+        if not mod.is_root:
+            fail("Only the root module may use the rulesets.rust tag, but {} does. Pass dev_dependency = True to its use_extension call.".format(mod.name))
+        if len(mod.tags.rust) > 1:
+            fail("The root module uses the rulesets.rust tag more than once.")
+
+        # buildifier: disable=canonical-repository
+        rules_rust = "@@" + mod.tags.rust[0].rules_rust.repo_name
+
+    _rulesets_repo(
+        name = "rules_lint_rulesets",
+        rules_rust = rules_rust,
+    )
+
+    return mctx.extension_metadata(reproducible = True)
+
+rulesets = module_extension(
+    implementation = _rulesets_extension_impl,
+    doc = """Tells rules_lint which language rulesets your targets are built with.
+
+rules_lint doesn't depend on language rulesets such as rules_rust. Linters that need a ruleset's
+providers or helper functions load them from the repository you configure here instead.
+""",
+    tag_classes = {
+        "rust": tag_class(
+            doc = """Points rules_lint at the rules_rust repository that builds your Rust targets.
+
+Required by `lint_clippy_aspect`:
+
+```starlark
+lint_rulesets = use_extension("@rules_lint//lint:extensions.bzl", "rulesets")
+lint_rulesets.rust(rules_rust = "@rules_rust")
+```
+
+Only the root module may use this tag. Modules that others depend on, such as those in the
+Bazel Central Registry, have to pass `dev_dependency = True` to `use_extension`.
+""",
+            attrs = {
+                "rules_rust": attr.label(
+                    doc = "Any label in the rules_rust repository, typically just `@rules_rust`.",
+                    mandatory = True,
+                ),
+            },
+        ),
+    },
+)

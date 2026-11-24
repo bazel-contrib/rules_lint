@@ -74,7 +74,7 @@ def _reports(ctx, src):
 {test}: the lint aspect produced no report for {src}, so there is nothing to assert on.
 The aspect did not run on that target. Either its rule kind is not one the aspect visits, \
 it is tagged "no-lint", or it does not advertise a provider the aspect requires \
-(clippy: the target is built by a different rules_rust than the lint module loads).""".format(
+(clippy: the target is built by a different rules_rust than the one passed to rulesets.rust).""".format(
             test = ctx.label,
             src = src.label,
         ))

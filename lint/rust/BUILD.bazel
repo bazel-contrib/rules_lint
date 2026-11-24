@@ -1,6 +1,6 @@
 load("@aspect_rules_js//js:defs.bzl", "js_binary", "js_library", "js_run_binary", "js_test")
 load("@bazel_lib//lib:diff_test.bzl", "diff_test")
-load("//:patcher_run.bzl", "patcher_run")
+load("//lint/private:patcher_run.bzl", "patcher_run")
 
 js_library(
     name = "diagnostic-formatter",

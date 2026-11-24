@@ -11,18 +11,18 @@ on:
   workflow_dispatch:
     inputs:
       tag_name:
-        description: 'The tag to publish, e.g. "v2.8.0" or "rust-v1.0.0".'
+        description: 'The tag to publish, e.g. "v2.8.0" or "scala-v1.0.0".'
         required: true
         type: string
       tag_prefix:
-        description: 'Prefix stripped from the tag to get the version, e.g. "v" or "rust-v".'
+        description: 'Prefix stripped from the tag to get the version, e.g. "v" or "scala-v".'
         required: true
         default: "v"
         type: string
       module_roots:
         description: |
           Newline-separated module roots to publish, e.g. "." for the root
-          rules_lint module or "lint/rust" for rules_lint_rust.
+          rules_lint module or "lint/scala" for rules_lint_scala.
           Required because this repo hosts several separately versioned
           modules: each release tag belongs to exactly one of them, so the
           publish must name which module the tag's version applies to.
