@@ -4,13 +4,24 @@ Typical usage:
 
 The rules_lint Clippy integration uses the clippy binary from your configured Rust toolchain.
 
-First, create a clippy configuration file. We'll assume you've created it in `//:.clippy.toml`.
+rules_lint doesn't depend on a Rust ruleset itself. Instead, tell it which rules_rust repository builds your
+Rust targets in your `MODULE.bazel` file. With rules_rs, that's the `rules_rust` repository its extension provides:
+
+```starlark
+rules_rust = use_extension("@rules_rs//rs:rules_rust.bzl", "rules_rust")
+use_repo(rules_rust, "rules_rust")
+
+lint_rulesets = use_extension("@rules_lint//lint:extensions.bzl", "rulesets")
+lint_rulesets.rust(rules_rust = "@rules_rust")
+```
+
+Next, create a clippy configuration file. We'll assume you've created it in `//:.clippy.toml`.
 The file name must be suffixed by either `.clippy.toml` or `clippy.toml`, otherwise clippy will silently ignore it.
 
 Finally, create the linter aspect, typically in `tools/lint/linters.bzl`:
 
 ```starlark
-load("@rules_lint_rust//:clippy.bzl", "lint_clippy_aspect")
+load("@rules_lint//lint:clippy.bzl", "lint_clippy_aspect")
 
 clippy = lint_clippy_aspect(
     config = Label("//:.clippy.toml"),
@@ -20,7 +31,7 @@ clippy = lint_clippy_aspect(
 ```
 
 Now your targets will be linted with clippy.
-Only targets built with the `rules_rust` that `rules_rs` provides are linted. The aspect skips any other Rust target,
+Only targets built with the configured `rules_rust` are linted. The aspect skips any other Rust target,
 and a `lint_test` on one fails rather than passing with nothing checked.
 If you wish a target to be excluded from linting, you can give them the `noclippy` tag.
 If you wish a clippy lint exception to fail the build, please enable the `--@rules_lint//lint:fail_on_violation` flag.
@@ -31,10 +42,9 @@ Please note that the aspect will propagate to all transitive Rust dependencies o
 Please watch issue https://github.com/aspect-build/rules_lint/issues/385 for updates on this behavior.
 """
 
-load("@rules_lint//lint/private:lint_aspect.bzl", "LintOptionsInfo", "OUTFILE_FORMAT", "filter_srcs", "noop_lint_action", "output_files", "patch_and_output_files", "should_visit")
-load("@rules_lint//lint/private:patcher_action.bzl", "patcher_attrs", "run_patcher")
-load("@rules_rust//rust:defs.bzl", "rust_clippy_action")
-load("@rules_rust//rust:rust_common.bzl", "CrateInfo", "TestCrateInfo")
+load("@rules_lint_rulesets//:rust.bzl", "rules_rust")
+load("//lint/private:lint_aspect.bzl", "LintOptionsInfo", "OUTFILE_FORMAT", "filter_srcs", "noop_lint_action", "output_files", "patch_and_output_files", "should_visit")
+load("//lint/private:patcher_action.bzl", "patcher_attrs", "run_patcher")
 
 _MNEMONIC = "AspectRulesLintClippy"
 
@@ -126,7 +136,7 @@ def _clippy_aspect_impl(target, ctx):
     if not should_visit(ctx.rule, ctx.attr._rule_kinds):
         return []
 
-    rust_toolchain = ctx.toolchains[Label("@rules_rust//rust:toolchain_type")]
+    rust_toolchain = ctx.toolchains[rules_rust.toolchain_type]
     clippy_bin = rust_toolchain.clippy_driver
 
     files_to_lint = filter_srcs(ctx.rule)
@@ -134,7 +144,7 @@ def _clippy_aspect_impl(target, ctx):
     # Declare outputs with sibling = crate_info.output when available, so they're placed in the same directory
     # structure that rustc expects. This is required because rust_clippy_action sets --out-dir based on
     # crate_info.output and rustc needs to write .d files to that directory
-    crate_info = rust_clippy_action.get_clippy_ready_crate_info(target, ctx)
+    crate_info = rules_rust.rust_clippy_action.get_clippy_ready_crate_info(target, ctx)
     sibling = crate_info.output if crate_info else None
 
     patch_file = None
@@ -164,7 +174,7 @@ def _clippy_aspect_impl(target, ctx):
     raw_exit_code = ctx.actions.declare_file(OUTFILE_FORMAT.format(label = target.label.name, mnemonic = _MNEMONIC, suffix = "raw_clippy_exit_code"), sibling = sibling)
     raw_rustc_json_diagnostics = ctx.actions.declare_file(OUTFILE_FORMAT.format(label = target.label.name, mnemonic = _MNEMONIC, suffix = "rustc_json_diagnostics"), sibling = sibling)
 
-    rust_clippy_action.action(
+    rules_rust.rust_clippy_action.action(
         ctx,
         clippy_executable = clippy_bin,
         crate_info = crate_info,
@@ -256,10 +266,20 @@ def lint_clippy_aspect(config, rule_kinds = DEFAULT_RULE_KINDS, clippy_flags = [
 
     Args:
         config (File): Label of the desired Clippy configuration file to use. Reference: https://doc.rust-lang.org/clippy/configuration.html
-        rule_kinds (List[str]): List of rule kinds to lint. Defaults to {default_rule_kinds}.
+        rule_kinds (List[str]): List of rule kinds to lint.
         clippy_flags (List[str]): Extra clippy/rustc lint flags (e.g. `-Dwarnings`, `-Aclippy::style`).
         args (List[str]): Additional options to pass to Clippy.
-    """.format(default_rule_kinds = DEFAULT_RULE_KINDS)
+
+    Returns:
+        An aspect that runs Clippy on the Rust targets it visits.
+    """
+    if not rules_rust:
+        fail("""\
+lint_clippy_aspect needs to know which rules_rust builds your Rust targets. Add this to your MODULE.bazel file:
+
+lint_rulesets = use_extension("@rules_lint//lint:extensions.bzl", "rulesets")
+lint_rulesets.rust(rules_rust = "@rules_rust")
+""")
     attrs = {
         "_options": attr.label(
             default = "@rules_lint//lint:options",
@@ -287,7 +307,7 @@ In particular, cargo diagnostics _may contain_ rustc diagnostics, but they don't
 References:
 - Rustc diagnostic format: https://doc.rust-lang.org/beta/rustc/json.html#diagnostics
 """,
-            default = Label("//:cli"),
+            default = Label("//lint/rust:cli"),
             executable = True,
             cfg = "exec",
         ),
@@ -300,7 +320,7 @@ In particular, cargo diagnostics _may contain_ rustc diagnostics, but they don't
 References:
 - Rustc diagnostic format: https://doc.rust-lang.org/beta/rustc/json.html#diagnostics
 """,
-            default = Label("//:cli"),
+            default = Label("//lint/rust:cli"),
             executable = True,
             cfg = "exec",
         ),
@@ -310,17 +330,17 @@ References:
         attr_aspects = ["deps"],
         implementation = _clippy_aspect_impl,
         attrs = patcher_attrs | attrs,
-        # A target not built by rules_rs carries a CrateInfo this module cannot read, so skip
-        # it rather than report it clean. Either provider qualifies: static and shared
+        # A target not built by the configured rules_rust carries a CrateInfo this aspect cannot
+        # read, so skip it rather than report it clean. Either provider qualifies: static and shared
         # libraries advertise only the test one.
         # https://github.com/hermeticbuild/rules_rust/blob/d11dcf615d6eddeb48d524d464563ca06c3b2a98/rust/private/rust.bzl#L1278-L1281
         required_providers = [
-            [CrateInfo],
-            [TestCrateInfo],
+            [rules_rust.CrateInfo],
+            [rules_rust.TestCrateInfo],
         ],
         toolchains =
             [
-                Label("@rules_rust//rust:toolchain_type"),
+                rules_rust.toolchain_type,
                 "@bazel_tools//tools/cpp:toolchain_type",
             ],
     )

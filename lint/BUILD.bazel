@@ -173,6 +173,16 @@ bzl_library(
 )
 
 bzl_library(
+    name = "clippy",
+    srcs = ["clippy.bzl"],
+    deps = [
+        "//lint/private:lint_aspect",
+        "//lint/private:patcher_action",
+        "@rules_lint_rulesets//:rust",
+    ],
+)
+
+bzl_library(
     name = "lint_test",
     srcs = ["lint_test.bzl"],  # keep
     deps = [

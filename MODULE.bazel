@@ -63,6 +63,10 @@ use_repo(rules_lint_toolchains, "gopackagesdriver_toolchains", "sarif_parser_too
 
 register_toolchains("@sarif_parser_toolchains//:all", "@gopackagesdriver_toolchains//:all")
 
+# Language rulesets that linters such as clippy load from, as chosen by the root module.
+rulesets = use_extension("@rules_lint//lint:extensions.bzl", "rulesets")
+use_repo(rulesets, "rules_lint_rulesets")
+
 # The Go linter already loads rules_go providers and package metadata; prebuilts
 # remove helper source builds, but published modules still need these loads.
 # 0.61.0 fixes the package metadata aspect's cgo test inputs (rules_go#4589).
