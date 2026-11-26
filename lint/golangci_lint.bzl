@@ -19,7 +19,8 @@ real golangci-lint binary against a static, file-reading `GOPACKAGESDRIVER`
 shared module cache. Requires rules_go >= 0.61.0 for cgo test inputs.
 """
 
-load("@io_bazel_rules_go//go/private:providers.bzl", "GoStdLib")
+load("@io_bazel_rules_go//go/private:mode.bzl", "installsuffix")
+load("@io_bazel_rules_go//go/private:providers.bzl", "GoConfigInfo", "GoStdLib")
 load("@io_bazel_rules_go//go/tools/gopackagesdriver:aspect.bzl", "GoPkgInfo", "go_pkg_info_aspect")
 load("//lint/private:lint_aspect.bzl", "LintOptionsInfo", "OUTFILE_FORMAT", "SARIF_PARSER_TOOLCHAIN", "output_files", "should_visit")
 
@@ -31,7 +32,7 @@ _MNEMONIC = "AspectRulesLintGolangciLint"
 _GO_TOOLCHAIN = "@io_bazel_rules_go//go:toolchain"
 _DRIVER_TOOLCHAIN = Label("//tools/toolchains:gopackagesdriver_toolchain_type")
 
-def golangci_lint_action(ctx, executable, driver, pkg_info, sdk, stdlib, config, stdout, sarif, exit_code = None, options = [], mnemonic = _MNEMONIC):
+def golangci_lint_action(ctx, executable, driver, pkg_info, sdk, stdlib, mode, config, stdout, sarif, exit_code = None, options = [], mnemonic = _MNEMONIC):
     """Run golangci-lint hermetically against a single Go package.
 
     Args:
@@ -41,6 +42,7 @@ def golangci_lint_action(ctx, executable, driver, pkg_info, sdk, stdlib, config,
         pkg_info: the GoPkgInfo provider from go_pkg_info_aspect
         sdk: the rules_go GoSDK provider (used to derive GOROOT and the go binary)
         stdlib: the rules_go GoStdLib provider (precompiled stdlib .a archives)
+        mode: the rules_go GoConfigInfo of the linted target's configuration
         config: the .golangci.yml config file
         stdout: human-readable report output file
         sarif: machine-readable (raw, pre-normalization) SARIF report output file
@@ -60,7 +62,7 @@ def golangci_lint_action(ctx, executable, driver, pkg_info, sdk, stdlib, config,
     stdlib_json = [pkg_info.stdlib_json_file] if pkg_info.stdlib_json_file else []
 
     # rules_go builds the stdlib into a single "pkg" tree exposed via
-    # GoStdLib.libs, laid out as pkg/<goos>_<goarch>/<importpath>.a. The static
+    # GoStdLib.libs, laid out as pkg/<installsuffix>/<importpath>.a. The static
     # driver injects each as the ExportFile for the corresponding Standard
     # package (spike finding #1). NOTE: the GoSDK's own `libs` is empty for
     # modern (>=1.20) SDKs, which is why we read the BUILT stdlib here instead.
@@ -116,14 +118,19 @@ def golangci_lint_action(ctx, executable, driver, pkg_info, sdk, stdlib, config,
         # are small so the single-threaded cost is negligible. If flakes ever
         # resurface, the real fix is upstream serialization in the importer.
         "GOMAXPROCS": "1",
+        # Load and type-check for the target's platform and build tags, which
+        # the stdlib archives were built with.
+        "GOOS": mode.goos,
+        "GOARCH": mode.goarch,
+        "GOTAGS": ",".join(mode.tags),
     }
 
-    # GOPACKAGESDRIVER_STDLIB_PKG_DIR points at the dir that *contains* the
-    # <goos>_<goarch>/ subtree of precompiled .a files. GoStdLib.libs is a single
-    # tree artifact: the "pkg" directory itself (.../stdlib_/pkg). The driver
-    # appends "<goos>_<goarch>/<importpath>.a" to it.
+    # GoStdLib.libs is a single tree artifact, the "pkg" directory. go install
+    # puts the archives under rules_go's installsuffix for the build mode
+    # (<goos>_<goarch>, plus _race or _msan); the driver appends
+    # "<importpath>.a" to that directory.
     if stdlib_libs_list:
-        env["GOPACKAGESDRIVER_STDLIB_PKG_DIR"] = stdlib_libs_list[0].path
+        env["GOPACKAGESDRIVER_STDLIB_PKG_DIR"] = stdlib_libs_list[0].path + "/" + installsuffix(mode)
 
     inputs = depset(
         direct = [driver, config, sdk.root_file] + stdlib_json + stdlib_libs_list,
@@ -226,6 +233,7 @@ def _golangci_lint_aspect_impl(target, ctx):
     pkg_info = target[GoPkgInfo]
     sdk = ctx.toolchains[_GO_TOOLCHAIN].sdk
     stdlib = ctx.attr._go_stdlib[GoStdLib]
+    mode = ctx.attr._go_config[GoConfigInfo]
 
     options = ctx.attr._options[LintOptionsInfo]
     outputs, info = output_files(ctx.attr._mnemonic, target, ctx)
@@ -250,6 +258,7 @@ def _golangci_lint_aspect_impl(target, ctx):
         pkg_info,
         sdk,
         stdlib,
+        mode,
         ctx.file._config_file,
         outputs.human.out,
         raw_sarif,
@@ -300,6 +309,10 @@ def lint_golangci_lint_aspect(binary, config, rule_kinds = ["go_library", "go_bi
             "_go_stdlib": attr.label(
                 default = "@io_bazel_rules_go//:stdlib",
                 providers = [GoStdLib],
+            ),
+            "_go_config": attr.label(
+                default = "@io_bazel_rules_go//:go_config",
+                providers = [GoConfigInfo],
             ),
             "_rule_kinds": attr.string_list(
                 default = rule_kinds,

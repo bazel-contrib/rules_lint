@@ -10,8 +10,10 @@
 //  1. Stdlib ExportFile injection. golangci-lint typechecks dependencies from
 //     each package's ExportFile, but rules_go's stdlib .pkg.json carry an empty
 //     ExportFile. rules_go separately provides precompiled stdlib archives at
-//     <STDLIB_PKG_DIR>/<GOOS>_<GOARCH>/<importpath>.a, so for every Standard
-//     package we synthesize that absolute path before it enters the registry.
+//     <STDLIB_PKG_DIR>/<importpath>.a, where STDLIB_PKG_DIR is the stdlib's
+//     install directory for the build mode (e.g. pkg/linux_amd64_race), so for
+//     every Standard package we synthesize that absolute path before it enters
+//     the registry.
 //
 //  2. Roots come from the environment, not query args. The static driver cannot
 //     resolve golangci-lint's ./... / file= patterns (that requires bazel
@@ -26,7 +28,6 @@ import (
 	"io"
 	"os"
 	"path/filepath"
-	"runtime"
 	"strings"
 
 	"golang.org/x/tools/go/packages"
@@ -102,7 +103,21 @@ func stdlibExportFile(pkgPath string) string {
 	if dir == "" {
 		return ""
 	}
-	return filepath.Join(dir, runtime.GOOS+"_"+runtime.GOARCH, pkgPath+".a")
+	return filepath.Join(dir, pkgPath+".a")
+}
+
+// checkStdlibPkgDir fails when GOPACKAGESDRIVER_STDLIB_PKG_DIR names a
+// directory that does not exist, rather than pointing every stdlib ExportFile
+// at a missing archive.
+func checkStdlibPkgDir() error {
+	dir := os.Getenv("GOPACKAGESDRIVER_STDLIB_PKG_DIR")
+	if dir == "" {
+		return nil
+	}
+	if _, err := os.Stat(dir); err != nil {
+		return fmt.Errorf("stdlib archive directory GOPACKAGESDRIVER_STDLIB_PKG_DIR=%q is unusable: %w", dir, err)
+	}
+	return nil
 }
 
 // run reads a DriverRequest from in, assembles the package graph from the
@@ -112,6 +127,10 @@ func run(in io.Reader, out io.Writer, _ []string) error {
 	request, err := ReadDriverRequest(in)
 	if err != nil {
 		return fmt.Errorf("unable to read request: %w", err)
+	}
+
+	if err := checkStdlibPkgDir(); err != nil {
+		return err
 	}
 
 	jsonFiles, err := stagedJSONFiles()
@@ -155,7 +174,7 @@ func run(in io.Reader, out io.Writer, _ []string) error {
 	resp := &packages.DriverResponse{
 		NotHandled: false,
 		Compiler:   "gc",
-		Arch:       runtime.GOARCH,
+		Arch:       buildContext.GOARCH,
 		Roots:      rootPkgs,
 		Packages:   paks,
 	}
