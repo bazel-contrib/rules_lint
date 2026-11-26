@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
-	"runtime"
 	"strings"
 	"testing"
 
@@ -31,7 +30,7 @@ func TestRunResolvesAndInjects(t *testing.T) {
 	workspace := filepath.Join(tmp, "workspace")
 	outputBase := filepath.Join(tmp, "outputbase")
 	jsonDir := filepath.Join(tmp, "json")
-	stdlibPkgDir := filepath.Join(tmp, "stdlibpkg")
+	stdlibPkgDir := filepath.Join(tmp, "stdlibpkg", "linux_amd64_race")
 
 	for _, d := range []string{execroot, workspace, outputBase, jsonDir, stdlibPkgDir} {
 		if err := os.MkdirAll(d, 0o755); err != nil {
@@ -114,7 +113,7 @@ func TestRunResolvesAndInjects(t *testing.T) {
 	if std == nil {
 		t.Fatalf("stdlib package %q not present in response; packages: %v", stdlibID, pkgIDs(resp.Packages))
 	}
-	wantStdExport := filepath.Join(stdlibPkgDir, runtime.GOOS+"_"+runtime.GOARCH, "math/bits.a")
+	wantStdExport := filepath.Join(stdlibPkgDir, "math/bits.a")
 	if std.ExportFile != wantStdExport {
 		t.Errorf("stdlib ExportFile = %q; want %q (injected, ResolvePaths must leave absolute path untouched)", std.ExportFile, wantStdExport)
 	}
@@ -158,5 +157,19 @@ func TestMatchConcreteRoots(t *testing.T) {
 	roots, pkgs := registry.Match([]string{"@@custom_main//pkg:lib"})
 	if len(roots) != 1 || roots[0] != "@@custom_main//pkg:lib" || len(pkgs) != 1 {
 		t.Fatalf("Match = %v, %v; want only concrete root", roots, pkgIDs(pkgs))
+	}
+}
+
+// TestRunMissingStdlibPkgDir checks that a stdlib install directory that does
+// not exist fails the run instead of pointing every stdlib ExportFile at a
+// missing archive.
+func TestRunMissingStdlibPkgDir(t *testing.T) {
+	t.Setenv("GOPACKAGESDRIVER_STDLIB_PKG_DIR", filepath.Join(t.TempDir(), "linux_amd64_race"))
+	t.Setenv("GOPACKAGESDRIVER_JSON_DIR", t.TempDir())
+
+	var out bytes.Buffer
+	err := run(strings.NewReader(`{}`), &out, nil)
+	if err == nil || !strings.Contains(err.Error(), "GOPACKAGESDRIVER_STDLIB_PKG_DIR") {
+		t.Fatalf("run = %v; want an error naming GOPACKAGESDRIVER_STDLIB_PKG_DIR", err)
 	}
 }
