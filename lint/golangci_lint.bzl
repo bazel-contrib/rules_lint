@@ -70,7 +70,10 @@ def golangci_lint_action(ctx, executable, driver, pkg_info, sdk, stdlib, config,
     # the driver can glob via GOPACKAGESDRIVER_JSON_DIR. The stdlib_json_file
     # (~294 stdlib packages in one file) MUST be included: without it the driver's
     # registry has no stdlib packages, so it can neither inject their ExportFile
-    # nor resolve dependencies' stdlib imports (e.g. encoding/xml, fmt).
+    # nor resolve dependencies' stdlib imports (e.g. encoding/xml, fmt). Each
+    # copy is prefixed with its position, since packages with the same target
+    # name (e.g. golang.org/x/text's language and internal/language) share a
+    # basename.
     stage_inputs = depset(direct = stdlib_json, transitive = [json_files])
     json_dir = ctx.actions.declare_directory(OUTFILE_FORMAT.format(label = ctx.label.name, mnemonic = mnemonic, suffix = "pkgjson.d"))
     stage_args = ctx.actions.args()
@@ -79,7 +82,7 @@ def golangci_lint_action(ctx, executable, driver, pkg_info, sdk, stdlib, config,
     ctx.actions.run_shell(
         inputs = stage_inputs,
         outputs = [json_dir],
-        command = 'dir="$1"; shift; mkdir -p "$dir"; for f in "$@"; do dest="$dir/$(basename "$f")"; cp -f "$f" "$dest"; chmod u+w "$dest"; done',
+        command = 'dir="$1"; shift; mkdir -p "$dir"; i=0; for f in "$@"; do i=$((i+1)); dest="$dir/$i-$(basename "$f")"; cp -f "$f" "$dest"; chmod u+w "$dest"; done',
         arguments = [stage_args],
         mnemonic = mnemonic + "Stage",
         progress_message = "Staging Go package metadata for %{label}",
