@@ -17,6 +17,15 @@ golangci_lint_test(
     expected_exit_code = 0,
 )
 
+# Like golang.org/x/text's language and internal/language, the consumer's two
+# dependencies share a target name and so a package metadata basename. Both
+# must reach the driver for the consumer to type-check.
+golangci_lint_test(
+    name = "golangci_lint_same_name_deps",
+    srcs = ["//test/samename/consumer"],
+    expected_exit_code = 0,
+)
+
 # Every lint action starts with an empty private cache. Exit 1 alone cannot
 # distinguish the expected printf finding from a false undefined-symbol error.
 golangci_lint_facts_test(
