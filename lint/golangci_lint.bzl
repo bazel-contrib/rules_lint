@@ -164,7 +164,9 @@ def golangci_lint_action(ctx, executable, driver, pkg_info, sdk, stdlib, config,
         command = cache_prologue + goroot_prologue + sarif_setup + 'bin="$1"; shift; ' + run_golangci + "; echo $? >" + exit_code.path + "; " + copy_sarif
         outputs.append(exit_code)
     else:
-        command = cache_prologue + goroot_prologue + sarif_setup + 'bin="$1"; shift; ' + run_golangci + "; " + copy_sarif
+        # Fail with golangci-lint's own status, printing its findings so the
+        # failed action shows them.
+        command = cache_prologue + goroot_prologue + sarif_setup + 'bin="$1"; shift; ' + run_golangci + "; status=$?; " + copy_sarif + '; if [ "$status" -ne 0 ]; then cat ' + stdout.path + ' >&2; fi; exit "$status"'
 
     run_args = ctx.actions.args()
     run_args.add(executable.path)
