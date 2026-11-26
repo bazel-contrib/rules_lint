@@ -160,3 +160,61 @@ func TestMatchConcreteRoots(t *testing.T) {
 		t.Fatalf("Match = %v, %v; want only concrete root", roots, pkgIDs(pkgs))
 	}
 }
+
+// rules_go writes a go_test's generated testmain package with the same ID as
+// the test package. The staged glob reads it last, so it must not replace the
+// test package as the lint root.
+func TestRunSkipsTestMain(t *testing.T) {
+	tmp := t.TempDir()
+	workspace := filepath.Join(tmp, "workspace")
+	jsonDir := filepath.Join(tmp, "json")
+	if err := os.MkdirAll(jsonDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+
+	testSrc := filepath.Join(workspace, "pkg", "foo_test.go")
+	mustWrite(t, testSrc, "package foo\n")
+	testMainSrc := filepath.Join(workspace, "bazel-out", "pkg", "testmain.go")
+	mustWrite(t, testMainSrc, "package main\n")
+
+	id := "@@//pkg:foo_test"
+	mustWrite(t, filepath.Join(jsonDir, "foo_test.pkg.json"), `{
+  "ID": "`+id+`",
+  "Name": "foo",
+  "PkgPath": "example.com/pkg/foo",
+  "GoFiles": ["__BAZEL_WORKSPACE__/pkg/foo_test.go"]
+}`)
+	mustWrite(t, filepath.Join(jsonDir, "foo_test~testmain.pkg.json"), `{
+  "ID": "`+id+`",
+  "Name": "main",
+  "PkgPath": "testmain",
+  "GoFiles": ["__BAZEL_WORKSPACE__/bazel-out/pkg/testmain.go"]
+}`)
+
+	t.Setenv("GOPACKAGESDRIVER_JSON_DIR", jsonDir)
+	t.Setenv("GOPACKAGESDRIVER_ROOTS", id)
+	t.Setenv("GOPACKAGESDRIVER_STDLIB_PKG_DIR", "")
+	t.Setenv("GOPACKAGESDRIVER_EXECROOT", workspace)
+	t.Setenv("GOPACKAGESDRIVER_WORKSPACE", workspace)
+	t.Setenv("GOPACKAGESDRIVER_OUTPUT_BASE", workspace)
+
+	var out bytes.Buffer
+	if err := run(strings.NewReader(`{"Mode": 8767, "Tests": true}`), &out, nil); err != nil {
+		t.Fatalf("run returned error: %v\nstdout: %s", err, out.String())
+	}
+	var resp packages.DriverResponse
+	if err := json.Unmarshal(out.Bytes(), &resp); err != nil {
+		t.Fatalf("unable to unmarshal driver response: %v\nstdout: %s", err, out.String())
+	}
+
+	root := findPackageByID(resp.Packages, id)
+	if root == nil {
+		t.Fatalf("root package %q not present in response; packages: %v", id, pkgIDs(resp.Packages))
+	}
+	if root.PkgPath != "example.com/pkg/foo" {
+		t.Errorf("root.PkgPath = %q; want the test package, not testmain", root.PkgPath)
+	}
+	if len(root.GoFiles) != 1 || root.GoFiles[0] != testSrc {
+		t.Errorf("root.GoFiles = %v; want [%q]", root.GoFiles, testSrc)
+	}
+}

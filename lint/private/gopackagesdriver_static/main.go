@@ -128,6 +128,11 @@ func run(in io.Reader, out io.Writer, _ []string) error {
 	registry := NewPackageRegistry(bazelVersion{})
 	for _, f := range jsonFiles {
 		if err := WalkFlatPackagesFromJSON(f, func(pkg *FlatPackage) {
+			// rules_go writes a go_test's generated main package with the
+			// test package's ID; registering it would replace the test package.
+			if pkg.PkgPath == "testmain" {
+				return
+			}
 			if pkg.IsStdlib() && pkg.ExportFile == "" {
 				if exp := stdlibExportFile(pkg.PkgPath); exp != "" {
 					pkg.ExportFile = exp
